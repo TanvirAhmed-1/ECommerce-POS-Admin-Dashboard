@@ -23,6 +23,9 @@ const dynamicBaseQuery = async (args: any, api: any, extraOptions: any) => {
     if (result.error && result.error.status === 401) {
       api.dispatch(logout());
       await removeTokenCookie();
+      if (typeof window !== "undefined") {
+        window.location.href = "/login";
+      }
     }
     return result;
   } catch (error) {
@@ -37,17 +40,17 @@ export const baseApi = createApi({
   reducerPath: "baseApi",
   baseQuery: dynamicBaseQuery,
   tagTypes: [
-    "ServiceType",
-    "Counter",
-    "Staff",
+    "Category",
+    "Brand",
+    "Attribute",
     "Service",
     "Transaction",
     "User",
-    "Organization",
-    "Card",
-    "Events",
-    "Quotas",
-    "SMS",
+    "Product",
+    "Slider",
+    "Counter",
+    "ServiceType",
+    "Card"
   ],
   endpoints: () => ({}),
 });

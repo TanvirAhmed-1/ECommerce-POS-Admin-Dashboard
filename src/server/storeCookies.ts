@@ -11,3 +11,14 @@ export async function removeTokenCookie() {
     maxAge: 0,
   });
 }
+
+export async function setTokenCookie(token: string) {
+  const cookieStore = await cookies();
+  cookieStore.set("token", token, {
+    path: "/",
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 60 * 60 * 24 * 3, // 3 days
+  });
+}

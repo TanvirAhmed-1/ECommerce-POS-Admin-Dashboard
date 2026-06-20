@@ -1,9 +1,7 @@
 "use client";
 
-// import { Textarea } from "@/components/ui/textarea";
 import { useFormContext } from "react-hook-form";
 import { Label } from "../ui/label";
-import { Textarea } from "../ui/textarea";
 
 type RHFTextareaProps = {
   name: string;
@@ -31,19 +29,26 @@ export default function RHFTextarea({
   const error = errors[name]?.message as string;
 
   return (
-    <div className="flex flex-1 flex-col gap-2 w-full">
-      <Label htmlFor={name}>{label}</Label>
-      <Textarea
+    <div className="flex flex-1 flex-col gap-1.5 w-full">
+      <Label 
+        htmlFor={name}
+        className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider"
+      >
+        {label}
+      </Label>
+      <textarea
         id={name}
         placeholder={placeholder}
-        defaultValue={defaultValue} // set default value
+        defaultValue={defaultValue}
         rows={rows}
-        className={`border ${
-          error ? "border-red-500" : "border-gray-400"
-        } bg-white w-full`}
+        className={`w-full p-3 rounded-lg border ${
+          error
+            ? "border-destructive focus:border-destructive"
+            : "border-border focus:border-zinc-400 dark:focus:border-zinc-700"
+        } bg-card text-xs font-medium text-foreground outline-none transition-all placeholder:text-muted-foreground disabled:opacity-50`}
         {...register(name, rules)}
       />
-      {error && <span className="text-sm text-red-500">{error}</span>}
+      {error && <span className="text-[10px] font-bold text-destructive">{error}</span>}
     </div>
   );
 }

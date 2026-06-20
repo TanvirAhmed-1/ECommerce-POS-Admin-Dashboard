@@ -9,18 +9,7 @@ export const userApi = baseApi.injectEndpoints({
       }),
       providesTags: ["User"],
     }),
-    getNewIssueUsers: builder.query({
-      query: (params) => ({
-        url: "/new-card-issued-user",
-        params,
-      }),
-      providesTags: ["User"],
-    }),
-    getSingleUser: builder.query({
-      query: (id) => `/user/${id}`,
-      providesTags: ["User"],
-    }),
-    createUsers: builder.mutation({
+    createUser: builder.mutation({
       query: (data) => ({
         url: "/create-user",
         method: "POST",
@@ -28,26 +17,24 @@ export const userApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["User"],
     }),
-    checkoutUsers: builder.mutation({
-      query: (data) => ({
-        url: "/checkout-user",
-        method: "POST",
-        body: data,
-      }),
-      invalidatesTags: ["User"],
-    }),
-    applyPenaltyUsers: builder.mutation({
-      query: (data) => ({
-        url: "/apply-penalty",
-        method: "POST",
-        body: data,
-      }),
-      invalidatesTags: ["User"],
-    }),
     updateUser: builder.mutation({
-      query: ({ id, ...data }) => ({
+      query: ({ id, data }) => ({
         url: `/update-user/${id}`,
-        method: "PUT",
+        method: "PATCH",
+        body: data,
+      }),
+      invalidatesTags: ["User"],
+    }),
+    getUserProfile: builder.query({
+      query: () => ({
+        url: "/get-profile",
+      }),
+      providesTags: ["User"],
+    }),
+    updateUserProfile: builder.mutation({
+      query: (data) => ({
+        url: "/update-profile",
+        method: "PATCH",
         body: data,
       }),
       invalidatesTags: ["User"],
@@ -64,11 +51,9 @@ export const userApi = baseApi.injectEndpoints({
 
 export const {
   useGetAllUsersQuery,
-  useGetNewIssueUsersQuery,
-  useGetSingleUserQuery,
-  useCreateUsersMutation,
+  useCreateUserMutation,
   useUpdateUserMutation,
+  useGetUserProfileQuery,
+  useUpdateUserProfileMutation,
   useDeleteUserMutation,
-  useCheckoutUsersMutation,
-  useApplyPenaltyUsersMutation,
 } = userApi;

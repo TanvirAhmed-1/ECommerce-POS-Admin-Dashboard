@@ -1,5 +1,3 @@
-
-
 "use client";
 
 import { useFormContext, Controller } from "react-hook-form";
@@ -9,7 +7,7 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
+  SelectValue,
 } from "../ui/select";
 
 type RHFSelectProps = {
@@ -19,7 +17,8 @@ type RHFSelectProps = {
   options: { label: string; value: string }[];
   defaultValue?: string;
   rules?: Record<string, any>;
-  onChange?: (value: string) => void; // NEW
+  onChange?: (value: string) => void;
+  disabled?: boolean;
 };
 
 export default function RHFSelect({
@@ -30,13 +29,25 @@ export default function RHFSelect({
   defaultValue,
   rules,
   onChange,
+  disabled,
 }: RHFSelectProps) {
-  const { control, formState: { errors } } = useFormContext();
+  const {
+    control,
+    formState: { errors },
+  } = useFormContext();
+  
   const error = errors[name]?.message as string;
 
   return (
-    <div className="flex flex-col gap-2 flex-1 w-full">
-      <Label htmlFor={name}>{label}</Label>
+    <div className="flex flex-col gap-1.5 flex-1 w-full">
+      {label && (
+        <Label 
+          htmlFor={name}
+          className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider"
+        >
+          {label}
+        </Label>
+      )}
 
       <Controller
         name={name}
@@ -47,18 +58,20 @@ export default function RHFSelect({
           <Select
             value={field.value}
             onValueChange={(value) => {
-              field.onChange(value);    // update react-hook-form
-              onChange?.(value);        // custom handler
+              field.onChange(value);
+              onChange?.(value);
             }}
           >
             <SelectTrigger
-              className={`w-full bg-white border ${error ? "border-red-500" : "border-gray-400"
-                }`}
+              disabled={disabled}
+              className={`w-full h-10 px-3 rounded-lg border bg-card text-xs font-medium text-foreground outline-none transition-all focus:border-zinc-400 dark:focus:border-zinc-700 ${
+                error ? "border-destructive" : "border-border"
+              }`}
             >
               <SelectValue placeholder={placeholder} />
             </SelectTrigger>
 
-            <SelectContent>
+            <SelectContent className="bg-popover border border-border text-popover-foreground">
               {options.map((opt) => (
                 <SelectItem key={opt.value} value={opt.value}>
                   {opt.label}
@@ -69,7 +82,7 @@ export default function RHFSelect({
         )}
       />
 
-      {error && <span className="text-sm text-red-500">{error}</span>}
+      {error && <span className="text-[10px] font-bold text-destructive">{error}</span>}
     </div>
   );
 }

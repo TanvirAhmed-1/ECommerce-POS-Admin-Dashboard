@@ -1,8 +1,9 @@
+"use client";
+
 import { useFormContext } from "react-hook-form";
 import { useState } from "react";
-import { FaEye, FaEyeSlash } from "react-icons/fa";
+import { Eye, EyeOff } from "lucide-react";
 import { Label } from "../ui/label";
-import { Input } from "../ui/input";
 
 type RHFInputProps = {
   name: string;
@@ -28,37 +29,43 @@ export default function RHFInput({
   } = useFormContext();
 
   const error = errors[name]?.message as string;
-
   const [showPassword, setShowPassword] = useState(false);
 
   // Decide the input type
   const inputType = type === "password" && showPassword ? "text" : type;
 
   return (
-    <div className="flex flex-1 flex-col gap-2 w-full relative">
-      <Label htmlFor={name}>{label}</Label>
+    <div className="flex flex-1 flex-col gap-1.5 w-full relative">
+      <Label 
+        htmlFor={name}
+        className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider"
+      >
+        {label}
+      </Label>
       <div className="relative w-full">
-        <Input
+        <input
           id={name}
           type={inputType}
           placeholder={placeholder}
           defaultValue={defaultValue}
-          className={`border ${
-            error ? "border-red-500" : "border-gray-400"
-          } bg-white w-full pr-10`}
+          className={`w-full h-10 px-3 rounded-lg border ${
+            error
+              ? "border-destructive focus:border-destructive"
+              : "border-border focus:border-zinc-400 dark:focus:border-zinc-700"
+          } bg-card text-xs font-medium text-foreground outline-none transition-all placeholder:text-muted-foreground disabled:opacity-50 pr-10`}
           {...register(name, rules)}
         />
         {type === "password" && (
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
           >
-            {showPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
+            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
           </button>
         )}
       </div>
-      {error && <span className="text-sm text-red-500">{error}</span>}
+      {error && <span className="text-[10px] font-bold text-destructive">{error}</span>}
     </div>
   );
 }

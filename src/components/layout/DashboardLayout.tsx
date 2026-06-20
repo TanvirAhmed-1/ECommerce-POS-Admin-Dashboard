@@ -1,150 +1,64 @@
 "use client";
 
-import { dashboardLinks } from "@/constants/dashboardLinks";
-import Image from "next/image";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import React, { useState } from "react";
-import { FaChevronDown, FaChevronUp, FaSearch, FaBars } from "react-icons/fa";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { useRouter, usePathname } from "next/navigation";
+import Image from "next/image";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { logout } from "@/redux/features/auth/authSlice";
 import { removeTokenCookie } from "@/server/storeCookies";
-import { useRouter, usePathname } from "next/navigation";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, Sun, Moon, Sparkles } from "lucide-react";
-
-//sidebar Link
-const SidebarContent = ({
-  openSection,
-  toggleSection,
-  pathname,
-  theme,
-}: {
-  openSection: string | null;
-  toggleSection: (title: string) => void;
-  pathname: string;
-  theme: "dark" | "light";
-}) => (
-  <div className={`flex flex-col h-full backdrop-blur-xl border-r transition-all duration-300 ${theme === "light"
-      ? "bg-white/60 border-slate-200/80 text-slate-700"
-      : "bg-slate-950/40 border-white/10 text-slate-300"
-    }`}>
-    <div className={`h-16 flex items-center gap-3 px-4 border-b bg-transparent transition-all duration-300 ${theme === "light" ? "border-slate-200/80" : "border-white/10"
-      }`}>
-      <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shrink-0 shadow-md">
-        <Sparkles size={16} />
-      </div>
-      <div className="flex flex-col">
-        <span className={`text-sm font-extrabold tracking-tight leading-tight ${theme === "light" ? "text-slate-800" : "text-white"}`}>
-          Apex Engine
-        </span>
-        <span className="text-[10px] text-on-surface-variant/70 uppercase tracking-wider font-bold">
-          Enterprise Admin
-        </span>
-      </div>
-    </div>
-
-    <div className="flex-1 px-4 pt-5 pb-16 space-y-1.5 overflow-y-auto scrollbar-hide">
-      {dashboardLinks.map((item) => {
-        const isActive = item.route === pathname;
-        const isOpen = openSection === item.title;
-
-        return item.hasChildren ? (
-          <div key={item.title} className="group">
-            <button
-              onClick={() => toggleSection(item.title)}
-              className={`flex cursor-pointer w-full justify-between items-center text-sm gap-1 transition-all duration-300 ease-in-out p-2.5 rounded-lg font-semibold ${isOpen
-                  ? theme === "light"
-                    ? "bg-slate-100/80 text-slate-900 border border-slate-200/60"
-                    : "bg-white/5 text-white border border-white/10"
-                  : theme === "light"
-                    ? "text-slate-600 hover:bg-slate-100 hover:text-slate-900 hover:scale-[0.98]"
-                    : "text-slate-300 hover:bg-white/5 hover:text-white hover:scale-[0.98]"
-                }`}
-            >
-              <div className="flex flex-row items-center gap-2.5 mr-1">
-                {React.cloneElement(item.icon as React.ReactElement<any>, {
-                  className: isOpen ? "text-indigo-500" : "text-slate-400 group-hover:text-indigo-500"
-                })}
-                <span>{item.title}</span>
-              </div>
-              {isOpen ? (
-                <FaChevronUp className="text-[10px]" />
-              ) : (
-                <FaChevronDown className="text-[10px]" />
-              )}
-            </button>
-
-            {isOpen && (
-              <div className={`ml-4 mt-1 space-y-1 border-l-2 pl-2 transition-all duration-300 ${theme === "light" ? "border-slate-200" : "border-white/10"
-                }`}>
-                {item.subRoutes?.map((sub) => {
-                  const isSubActive = pathname === sub.route;
-                  return (
-                    <Link
-                      href={sub.route}
-                      key={sub.title}
-                      className={`text-sm font-semibold px-3 py-2 rounded-lg flex flex-row items-center gap-2 transition-all duration-200 hover:scale-[0.98] ${isSubActive
-                          ? "bg-linear-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/25"
-                          : theme === "light"
-                            ? "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
-                            : "text-slate-400 hover:bg-white/5 hover:text-white"
-                        }`}
-                    >
-                      {sub.title}
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        ) : (
-          <Link
-            href={item.route || "/"}
-            key={item.title}
-            className={`flex flex-row items-center text-sm gap-2.5 transition-all duration-300 ease-in-out p-2.5 rounded-lg font-semibold hover:scale-[0.98] ${isActive
-                ? "bg-linear-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/25"
-                : theme === "light"
-                  ? "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                  : "text-slate-300 hover:bg-white/5 hover:text-white"
-              }`}
-          >
-            {React.cloneElement(item.icon as React.ReactElement<any>, {
-              className: isActive ? "text-white" : "text-slate-400 group-hover:text-indigo-500"
-            })}
-            <span>{item.title}</span>
-          </Link>
-        );
-      })}
-    </div>
-
-    <div className={`py-4 text-center text-slate-500 text-xs font-semibold border-t ${theme === "light" ? "border-slate-200/80" : "border-white/5"
-      }`}>
-      © 2026 Apex Engine Enterprise
-    </div>
-  </div>
-);
+import {
+  LogOut,
+  Sun,
+  Moon,
+  Sparkles,
+  Search,
+  Bell,
+  Plus,
+  ChevronLeft,
+  ChevronRight,
+  Menu,
+  Sliders,
+  User,
+} from "lucide-react";
+import { zenithDashboardLinks } from "@/constants/dashboardLinks";
 
 function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const [openSection, setOpenSection] = useState<string | null>(() => {
-    const activeParent = dashboardLinks.find(item =>
-      item.subRoutes?.some(sub => sub.route === pathname)
-    );
-    return activeParent ? activeParent.title : null;
-  });
   const dispatch = useAppDispatch();
   const router = useRouter();
   const user = useAppSelector((state) => state.auth);
+  const getInitials = (nameStr: string | null) => {
+    if (!nameStr) return "AS";
+    const initials = nameStr
+      .trim()
+      .split(/\s+/)
+      .map((n) => n[0])
+      .slice(0, 2)
+      .join("")
+      .toUpperCase();
+    return initials || "AS";
+  };
+
+  // Redirect to login if token is missing/expired
+  useEffect(() => {
+    if (!user.token) {
+      router.push("/login");
+    }
+  }, [user.token, router]);
 
   const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
-  React.useEffect(() => {
+  // Initialize theme
+  useEffect(() => {
     if (typeof window !== "undefined") {
       const savedTheme = localStorage.getItem("theme") as "dark" | "light";
       if (savedTheme) {
@@ -160,7 +74,8 @@ function DashboardLayout({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  React.useEffect(() => {
+  // Update theme class on HTML element
+  useEffect(() => {
     const root = window.document.documentElement;
     if (theme === "light") {
       root.classList.add("light");
@@ -172,18 +87,15 @@ function DashboardLayout({ children }: { children: React.ReactNode }) {
     localStorage.setItem("theme", theme);
   }, [theme]);
 
-  React.useEffect(() => {
-    const activeParent = dashboardLinks.find(item =>
-      item.subRoutes?.some(sub => sub.route === pathname)
-    );
-    if (activeParent) {
-      setOpenSection(activeParent.title);
+  // Initialize and apply custom dashboard primary accent color on mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedColorHex = localStorage.getItem("dashboardColorHex");
+      if (savedColorHex) {
+        document.documentElement.style.setProperty("--primary", savedColorHex);
+      }
     }
-  }, [pathname]);
-
-  const toggleSection = (title: string) => {
-    setOpenSection((prev) => (prev === title ? null : title));
-  };
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -195,142 +107,306 @@ function DashboardLayout({ children }: { children: React.ReactNode }) {
     router.push("/login");
   };
 
-  return (
-    <div className={`h-screen flex flex-row overflow-hidden relative transition-colors duration-300 ${theme === "light"
-        ? "bg-linear-to-b from-slate-50 via-indigo-50/20 to-purple-50/15"
-        : "bg-linear-to-b from-gray-950 via-slate-900 to-indigo-950"
-      }`}>
-      {/* 🌌 Animated Background Glowing Blobs */}
-      <div className={`absolute top-1/4 left-1/4 w-[400px] h-[400px] rounded-full blur-[120px] pointer-events-none transition-colors duration-300 ${theme === "light" ? "bg-indigo-400/5" : "bg-indigo-600/10"
-        }`} />
-      <div className={`absolute bottom-1/4 right-1/4 w-[400px] h-[400px] rounded-full blur-[120px] pointer-events-none transition-colors duration-300 ${theme === "light" ? "bg-purple-400/5" : "bg-purple-600/10"
-        }`} />
-
-      {/* 💻 Desktop Sidebar */}
-      <div className={`hidden md:flex w-64 border-r shadow-2xl bg-transparent relative z-20 transition-colors duration-300 ${theme === "light" ? "border-slate-200/80" : "border-white/10"
-        }`}>
-        <SidebarContent
-          openSection={openSection}
-          toggleSection={toggleSection}
-          pathname={pathname}
-          theme={theme}
-        />
+  const renderSidebarContent = (isMobile = false) => (
+    <div
+      className={`flex flex-col h-full transition-colors duration-300 ${
+        theme === "light"
+          ? "bg-white border-zinc-200 text-zinc-800"
+          : "bg-black border-zinc-800 text-zinc-300"
+      }`}
+    >
+      {/* Sidebar Header */}
+      <div className="h-16 flex items-center gap-3 px-4 border-b border-inherit">
+        <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white shrink-0 shadow-md transform rotate-6">
+          <Sparkles size={16} />
+        </div>
+        {(!isCollapsed || isMobile) && (
+          <div className="flex flex-col animate-fade-in">
+            <span className="text-sm font-extrabold tracking-tight leading-tight text-foreground">
+              Zenith
+            </span>
+            <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">
+              DASHBOARD
+            </span>
+          </div>
+        )}
       </div>
 
-      {/* Right section */}
-      <div className="flex-1 flex flex-col overflow-hidden w-full relative z-10">
-        {/* Top bar */}
-        <div className={`h-16 border-b flex flex-row justify-between items-center px-4 md:px-6 shadow-md z-20 w-full transition-colors duration-300 ${theme === "light"
-            ? "bg-white/60 backdrop-blur-xl border-slate-200/80"
-            : "bg-slate-950/45 backdrop-blur-xl border-white/10"
-          }`}>
-          <div className="flex items-center gap-3 md:gap-0">
-            {/* Mobile Menu Trigger */}
+      {/* Sidebar Links */}
+      <div className="flex-1 px-3 py-4 space-y-6 overflow-y-auto custom-scrollbar">
+        {zenithDashboardLinks.map((group) => (
+          <div key={group.groupName} className="space-y-1.5">
+            {(!isCollapsed || isMobile) ? (
+              <h3 className="px-3 text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none">
+                {group.groupName}
+              </h3>
+            ) : (
+              <div className="w-full border-t border-muted/50 my-2" />
+            )}
+
+            <div className="space-y-0.5">
+              {group.links.map((link) => {
+                const isActive = pathname === link.route;
+                return (
+                  <Link
+                    key={link.title}
+                    href={link.route}
+                    className={`flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-semibold transition-all group ${
+                      isActive
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:bg-zinc-100/50 hover:text-foreground dark:hover:bg-zinc-800/40"
+                    }`}
+                    title={link.title}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`transition-colors shrink-0 ${
+                          isActive
+                            ? "text-primary"
+                            : "text-muted-foreground group-hover:text-foreground"
+                        }`}
+                      >
+                        {link.icon}
+                      </div>
+                      {(!isCollapsed || isMobile) && (
+                        <span className="truncate">{link.title}</span>
+                      )}
+                    </div>
+
+                    {link.badge !== undefined && (!isCollapsed || isMobile) && (
+                      <span className="px-1.5 py-0.5 text-[10px] font-extrabold bg-primary/10 text-primary rounded-full shrink-0">
+                        {link.badge}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Sidebar Footer Profile */}
+      <div className="p-3 border-t border-inherit mt-auto bg-inherit">
+        <div
+          className={`flex items-center justify-between p-2 rounded-xl transition-all ${
+            theme === "light" ? "bg-zinc-50" : "bg-zinc-900/40"
+          }`}
+        >
+          <div className="flex items-center gap-3 overflow-hidden">
+            {user.avatar ? (
+              <img
+                src={user.avatar}
+                alt={user.name || "User Avatar"}
+                className="w-9 h-9 rounded-full object-cover shrink-0 border border-border"
+              />
+            ) : (
+              <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-white shrink-0 font-extrabold text-sm border border-border">
+                {getInitials(user.name)}
+              </div>
+            )}
+            {(!isCollapsed || isMobile) && (
+              <div className="flex flex-col min-w-0 animate-fade-in">
+                <span className="text-xs font-bold leading-none text-foreground truncate">
+                  {user.name || "Aigars S."}
+                </span>
+                <span className="text-[10px] text-muted-foreground mt-0.5 truncate uppercase">
+                  {user.role?.replace("_", " ") || "Admin"}
+                </span>
+              </div>
+            )}
+          </div>
+          {(!isCollapsed || isMobile) && (
+            <button
+              onClick={handleLogout}
+              className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg cursor-pointer transition-colors"
+              title="Logout"
+            >
+              <LogOut size={16} />
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div
+      className={`h-screen flex flex-row overflow-hidden relative transition-colors duration-300 ${
+        theme === "light" ? "bg-zinc-50" : "bg-black"
+      }`}
+    >
+      {/* Left Sidebar (Desktop) */}
+      <div
+        className={`hidden md:flex flex-col h-full border-r z-40 relative transition-all duration-300 ease-in-out shrink-0 ${
+          isCollapsed ? "w-20" : "w-60"
+        } ${theme === "light" ? "border-zinc-200" : "border-zinc-800"}`}
+      >
+        {renderSidebarContent(false)}
+
+        {/* Sidebar Toggle Button */}
+        <button
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className={`absolute -right-3 top-20 w-6 h-6 rounded-full border flex items-center justify-center z-50 cursor-pointer shadow-sm hover:scale-105 transition-all ${
+            theme === "light"
+              ? "bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-50"
+              : "bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800"
+          }`}
+          aria-label="Toggle Sidebar"
+        >
+          {isCollapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
+        </button>
+      </div>
+
+      {/* Right Content Section */}
+      <div className="flex-1 flex flex-col overflow-hidden w-full">
+        {/* Sticky Topbar */}
+        <header
+          className={`h-16 border-b flex flex-row justify-between items-center px-4 md:px-6 z-30 transition-colors duration-300 ${
+            theme === "light"
+              ? "bg-white/80 backdrop-blur-md border-zinc-200"
+              : "bg-black/80 backdrop-blur-md border-zinc-800"
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            {/* Mobile Sidebar Trigger */}
             <div className="md:hidden flex items-center">
               <Sheet>
                 <SheetTrigger asChild>
-                  <button className={`p-2 transition-colors focus:outline-none bg-transparent border-none ${theme === "light" ? "text-slate-600 hover:text-indigo-600" : "text-slate-300 hover:text-indigo-400"
-                    }`}>
-                    <FaBars className="text-xl" />
+                  <button className="p-2 -ml-2 text-muted-foreground hover:text-foreground cursor-pointer bg-transparent border-none">
+                    <Menu size={20} />
                   </button>
                 </SheetTrigger>
-                <SheetContent
-                  side="left"
-                  className={`p-0 w-64 border-r ${theme === "light" ? "bg-white/95 border-slate-200/80" : "bg-slate-950 border-white/10"
-                    }`}
-                >
-                  <SidebarContent
-                    openSection={openSection}
-                    toggleSection={toggleSection}
-                    pathname={pathname}
-                    theme={theme}
-                  />
+                <SheetContent side="left" className="p-0 w-64 border-r">
+                  {renderSidebarContent(true)}
                 </SheetContent>
               </Sheet>
             </div>
 
-            {/* Search Box */}
-            <div className={`hidden sm:flex h-10 w-48 md:w-72 rounded-lg flex-row items-center px-3 gap-2 border transition-all duration-300 ${theme === "light"
-                ? "bg-slate-100 border-slate-200/80 focus-within:border-indigo-500 focus-within:bg-white"
-                : "bg-white/5 border-white/10 focus-within:border-indigo-500 focus-within:bg-white/10"
-              }`}>
-              <FaSearch className="text-slate-400 text-sm shrink-0" />
+            {/* Search Input */}
+            <div
+              className={`flex items-center h-10 w-40 sm:w-64 md:w-72 rounded-lg px-3 gap-2 border transition-all ${
+                theme === "light"
+                  ? "bg-zinc-50 border-zinc-200 focus-within:border-zinc-400 focus-within:bg-white"
+                  : "bg-zinc-900/60 border-zinc-800 focus-within:border-zinc-700 focus-within:bg-zinc-900"
+              }`}
+            >
+              <Search className="text-muted-foreground" size={16} />
               <input
                 type="text"
                 placeholder="Search anything..."
-                className={`flex-1 outline-none text-sm font-semibold bg-transparent w-full border-none! ${theme === "light" ? "text-slate-800 placeholder:text-slate-400" : "text-slate-200 placeholder:text-slate-500"
-                  }`}
+                className="flex-1 outline-none text-xs bg-transparent border-none font-medium text-foreground placeholder:text-muted-foreground w-full"
               />
+              <span className="hidden sm:inline text-[10px] font-bold text-muted-foreground border border-muted/30 px-1 rounded">
+                ⌘K
+              </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
-            {/* Theme Toggle Button */}
-            <button
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className={`p-2 rounded-xl border transition-all duration-300 flex items-center justify-center cursor-pointer ${theme === "light"
-                  ? "bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700 hover:scale-105"
-                  : "bg-white/5 hover:bg-white/10 border-white/10 text-yellow-400 hover:scale-105"
-                }`}
-              aria-label="Toggle Theme"
-            >
-              {theme === "light" ? (
-                <Moon className="w-5 h-5 transition-transform duration-300" />
-              ) : (
-                <Sun className="w-5 h-5 transition-transform duration-300 text-yellow-400" />
-              )}
+          {/* Right Header Icons */}
+          <div className="flex items-center gap-3.5">
+            {/* New Order Button */}
+            <button className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white hover:opacity-90 font-bold text-xs rounded-lg cursor-pointer transition-all shadow-sm shadow-primary/20">
+              <Plus size={14} />
+              New Order
             </button>
 
-            {/* User Profile */}
+            {/* Theme Toggle */}
+            <button
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className={`p-2 rounded-lg border transition-all cursor-pointer ${
+                theme === "light"
+                  ? "bg-white hover:bg-zinc-50 border-zinc-200 text-zinc-700"
+                  : "bg-zinc-950 hover:bg-zinc-900 border-zinc-800 text-yellow-400"
+              }`}
+              aria-label="Toggle Theme"
+            >
+              {theme === "light" ? <Moon size={16} /> : <Sun size={16} />}
+            </button>
+
+            {/* Customize Panel Icon */}
+            <button
+              className={`p-2 rounded-lg border transition-all cursor-pointer ${
+                theme === "light"
+                  ? "bg-white hover:bg-zinc-50 border-zinc-200 text-zinc-700"
+                  : "bg-zinc-950 hover:bg-zinc-900 border-zinc-800 text-zinc-400"
+              }`}
+              aria-label="Customize Layout"
+            >
+              <Sliders size={16} />
+            </button>
+
+            {/* Notification Badge */}
+            <button
+              className={`relative p-2 rounded-lg border transition-all cursor-pointer ${
+                theme === "light"
+                  ? "bg-white hover:bg-zinc-50 border-zinc-200 text-zinc-700"
+                  : "bg-zinc-950 hover:bg-zinc-900 border-zinc-800 text-zinc-400"
+              }`}
+              aria-label="Notifications"
+            >
+              <Bell size={16} />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary rounded-full animate-pulse" />
+            </button>
+
+            <div className="w-[1px] h-6 bg-border mx-0.5" />
+
+            {/* User Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className={`flex justify-between items-center gap-3 cursor-pointer p-1.5 rounded-lg transition-all group text-left outline-none border-none bg-transparent ${theme === "light" ? "hover:bg-slate-100" : "hover:bg-white/5"
-                  }`}>
-                  <div className="h-9 w-9 shrink-0 bg-indigo-950/40 rounded-full flex justify-center items-center overflow-hidden border border-white/10 group-hover:border-indigo-500 transition-colors">
-                    <Image
-                      src="/user_image.jpg"
-                      alt="profile"
-                      width={50}
-                      height={50}
-                      className="w-full h-full object-cover"
+                <button className="flex items-center gap-2 cursor-pointer outline-none border-none bg-transparent">
+                  {user.avatar ? (
+                    <img
+                      src={user.avatar}
+                      alt={user.name || "User Avatar"}
+                      className="w-8 h-8 rounded-full object-cover border border-border"
                     />
-                  </div>
-                  <div className="hidden sm:flex flex-row items-center gap-2">
-                    <div className="flex flex-col">
-                      <span className={`text-sm font-bold leading-tight whitespace-nowrap ${theme === "light" ? "text-slate-800" : "text-slate-200"
-                        }`}>
-                        {user.name || "John Doe"}
-                      </span>
-                      <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider">
-                        {user.role?.replace("_", " ") || "Super Admin"}
-                      </span>
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-extrabold text-xs border border-border">
+                      {getInitials(user.name)}
                     </div>
-                    <FaChevronDown className="text-xs text-slate-400 group-hover:text-indigo-500 transition-colors ml-1 shrink-0" />
-                  </div>
+                  )}
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className={`w-40 mt-2 rounded-xl shadow-2xl p-1.5 border ${theme === "light"
-                  ? "border-slate-200/80 bg-white/95 backdrop-blur-md"
-                  : "border-white/10 bg-slate-950/90 backdrop-blur-md"
-                }`} align="end">
+              <DropdownMenuContent
+                align="end"
+                className={`w-48 mt-1.5 p-1 rounded-xl border shadow-xl ${
+                  theme === "light"
+                    ? "bg-white border-zinc-200"
+                    : "bg-zinc-950 border-zinc-800"
+                }`}
+              >
+                <div className="px-2 py-1.5 border-b border-border mb-1">
+                  <p className="text-xs font-bold truncate">
+                    {user.name || "Aigars S."}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground truncate">
+                    {user.email || "aigars@example.com"}
+                  </p>
+                </div>
+                <DropdownMenuItem
+                  onClick={() => router.push("/profile")}
+                  className="flex items-center gap-2 px-2.5 py-2 rounded-lg text-foreground hover:bg-muted focus:bg-muted cursor-pointer"
+                >
+                  <User size={14} />
+                  <span className="text-xs font-bold">Profile</span>
+                </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={handleLogout}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-rose-500 hover:text-rose-450 hover:bg-rose-500/10 focus:bg-rose-500/10 cursor-pointer transition-colors"
+                  className="flex items-center gap-2 px-2.5 py-2 rounded-lg text-rose-500 hover:bg-rose-500/10 focus:bg-rose-500/10 cursor-pointer"
                 >
-                  <LogOut className="w-4 h-4" />
-                  <span className="text-sm font-bold">Logout</span>
+                  <LogOut size={14} />
+                  <span className="text-xs font-bold">Logout</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-        </div>
+        </header>
 
-        {/* Main content */}
-        <div className="flex-1 py-6 px-6 overflow-y-auto w-full relative z-10">
-          <div className="max-w-[1600px] mx-auto">
-            {children}
-          </div>
-        </div>
+        {/* Scrollable Dashboard View */}
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar w-full relative">
+          <div className="max-w-[1600px] mx-auto w-full">{children}</div>
+        </main>
       </div>
     </div>
   );

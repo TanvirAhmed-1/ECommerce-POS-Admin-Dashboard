@@ -3,12 +3,9 @@
 import React, { useState } from "react";
 import { useFormContext, Controller } from "react-hook-form";
 import { format } from "date-fns";
-
-//import { Button } from "@/components/ui/button";
 import { CalendarIcon } from "lucide-react";
 import { Label } from "../ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
-import { Button } from "../ui/button";
 import { Calendar } from "../ui/calendar";
 
 type RHFDatePickerProps = {
@@ -31,12 +28,16 @@ export default function RHFDatePicker({
   } = useFormContext();
 
   const error = errors[name]?.message as string;
-
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="flex flex-col gap-2 flex-1 w-full">
-      <Label htmlFor={name}>{label}</Label>
+    <div className="flex flex-col gap-1.5 flex-1 w-full">
+      <Label 
+        htmlFor={name}
+        className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider"
+      >
+        {label}
+      </Label>
       <Controller
         name={name}
         control={control}
@@ -45,22 +46,22 @@ export default function RHFDatePicker({
           <>
             <Popover open={open} onOpenChange={setOpen}>
               <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={`w-full justify-start text-left font-normal bg-white border ${
-                    error ? "border-red-500" : "border-gray-400"
+                <button
+                  type="button"
+                  className={`w-full h-10 px-3 justify-start text-left font-medium text-xs rounded-lg border bg-card hover:bg-muted/50 text-foreground outline-none transition-all flex items-center gap-2 cursor-pointer ${
+                    error ? "border-destructive focus:border-destructive" : "border-border focus:border-zinc-400 dark:focus:border-zinc-700"
                   }`}
                   onClick={() => setOpen(!open)}
                 >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  <CalendarIcon className="h-4 w-4 text-muted-foreground shrink-0" />
                   {field.value ? (
-                    format(field.value, "dd/MM/yyyy")
+                    <span className="text-foreground">{format(field.value, "dd/MM/yyyy")}</span>
                   ) : (
                     <span className="text-muted-foreground">{placeholder}</span>
                   )}
-                </Button>
+                </button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0 bg-white border border-gray-400">
+              <PopoverContent className="w-auto p-0 bg-card border border-border rounded-xl shadow-xl">
                 <Calendar
                   mode="single"
                   selected={field.value}
@@ -68,10 +69,11 @@ export default function RHFDatePicker({
                     field.onChange(date);
                     setOpen(false);
                   }}
+                  className="bg-card text-foreground rounded-xl"
                 />
               </PopoverContent>
             </Popover>
-            {error && <span className="text-sm text-red-500">{error}</span>}
+            {error && <span className="text-[10px] font-bold text-destructive">{error}</span>}
           </>
         )}
       />

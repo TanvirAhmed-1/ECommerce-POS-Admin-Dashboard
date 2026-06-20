@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Trash2, AlertTriangle } from "lucide-react";
-import toast from "react-hot-toast";
 import { ReactNode, useState } from "react";
 
 interface DeleteConfirmProps {
