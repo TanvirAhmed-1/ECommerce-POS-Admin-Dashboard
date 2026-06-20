@@ -15,6 +15,7 @@ import {
   Tag,
   Layers,
   Images,
+  CreditCard,
 } from "lucide-react";
 import React from "react";
 
@@ -109,6 +110,11 @@ export const zenithDashboardLinks: SidebarGroup[] = [
         title: "Invoices",
         route: "/invoices",
         icon: <Receipt size={18} />,
+      },
+      {
+        title: "Payments",
+        route: "/payments",
+        icon: <CreditCard size={18} />,
       },
     ],
   },

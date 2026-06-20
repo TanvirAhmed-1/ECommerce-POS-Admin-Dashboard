@@ -20,6 +20,8 @@ interface VariantsTabProps {
   isSaving: boolean;
   handleSubmit: (e: React.FormEvent) => void;
   setActiveTab: (val: any) => void;
+  uploadSingleImage: any;
+  showApiError: (err: any, toastId?: string) => void;
 }
 
 export default function VariantsTab({
@@ -39,6 +41,8 @@ export default function VariantsTab({
   isSaving,
   handleSubmit,
   setActiveTab,
+  uploadSingleImage,
+  showApiError,
 }: VariantsTabProps) {
   const slugifyString = (text: string) => {
     return text
@@ -48,6 +52,63 @@ export default function VariantsTab({
       .replace(/\s+/g, "-")
       .replace(/[^\w\-]+/g, "")
       .replace(/\-\-+/g, "-");
+  };
+
+  const [colorImages, setColorImages] = React.useState<Record<string, string>>({});
+
+  // Auto-load color images from existing variants when editing
+  React.useEffect(() => {
+    if (variants.length > 0) {
+      const initialColorImages: Record<string, string> = { ...colorImages };
+      let changed = false;
+
+      variants.forEach((v) => {
+        if (v.attributes && typeof v.attributes === "object") {
+          const colorKey = Object.keys(v.attributes).find(
+            (k) => k.toLowerCase().includes("color")
+          );
+          if (colorKey) {
+            const colorVal = v.attributes[colorKey];
+            if (colorVal && v.images && v.images.length > 0 && !initialColorImages[colorVal]) {
+              initialColorImages[colorVal] = v.images[0];
+              changed = true;
+            }
+          }
+        }
+      });
+
+      if (changed) {
+        setColorImages(initialColorImages);
+      }
+    }
+  }, [variants]);
+
+  const handleSetColorImage = (colorVal: string, url: string) => {
+    // 1. Update the mapping state
+    setColorImages((prev) => ({
+      ...prev,
+      [colorVal]: url,
+    }));
+
+    // 2. Update the variants list
+    setVariants((prev) =>
+      prev.map((v) => {
+        if (v.attributes && typeof v.attributes === "object") {
+          const colorKey = Object.keys(v.attributes).find(
+            (k) => k.toLowerCase().includes("color")
+          );
+          if (colorKey && v.attributes[colorKey] === colorVal) {
+            // Put the new color image as the first image. Keep other images.
+            const otherImages = (v.images || []).filter((img: string) => img !== url);
+            return {
+              ...v,
+              images: url ? [url, ...otherImages] : otherImages,
+            };
+          }
+        }
+        return v;
+      })
+    );
   };
 
   const handleToggleAttribute = (attrId: string) => {
@@ -120,6 +181,16 @@ export default function VariantsTab({
       const skuParts = nameParts.map(p => slugifyString(String(p)).toUpperCase());
       const variantSku = `${slug.toUpperCase() || "PROD"}-${skuParts.join("-")}`;
 
+      // Look up color-specific image if color is set
+      let initialImage = thumbnail || imageUrls[0] || "";
+      const colorKey = Object.keys(combo).find(k => k.toLowerCase().includes("color"));
+      if (colorKey) {
+        const colorVal = combo[colorKey];
+        if (colorVal && colorImages[colorVal]) {
+          initialImage = colorImages[colorVal];
+        }
+      }
+
       return {
         id: `var-${Date.now()}-${idx}`,
         name: variantName,
@@ -127,7 +198,7 @@ export default function VariantsTab({
         sku: variantSku,
         price: basePrice !== "" ? Number(basePrice) : 0,
         stock: baseStock !== "" ? Number(baseStock) : 10,
-        images: [thumbnail || imageUrls[0] || ""].filter(Boolean),
+        images: [initialImage].filter(Boolean),
       };
     });
 
@@ -282,6 +353,115 @@ export default function VariantsTab({
                                 </button>
                               </span>
                             ))}
+                          </div>
+                        )}
+
+                        {/* Color Swatch Images Management Panel */}
+                        {attr.name.toLowerCase().includes("color") && selectedVals.length > 0 && (
+                          <div className="mt-4 pt-3 border-t border-border/40 space-y-2.5">
+                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block font-heading">
+                              🎨 Color Swatch Images
+                            </span>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              {selectedVals.map((colorVal) => {
+                                const colorImg = colorImages[colorVal] || "";
+                                return (
+                                  <div key={colorVal} className="flex items-center gap-3 p-2.5 rounded-lg border border-border bg-card">
+                                    {/* Image Preview */}
+                                    <div className="relative w-12 h-12 rounded-lg border border-border bg-muted flex items-center justify-center shrink-0 overflow-hidden group">
+                                      {colorImg ? (
+                                        <img src={colorImg} alt={colorVal} className="w-full h-full object-cover" />
+                                      ) : (
+                                        <span className="text-[8px] text-muted-foreground font-bold">No Image</span>
+                                      )}
+                                    </div>
+                                    
+                                    {/* Controls */}
+                                    <div className="flex-1 min-w-0 space-y-1.5">
+                                      <span className="text-xs font-bold text-foreground block truncate">{colorVal}</span>
+                                      <div className="flex gap-2 items-center">
+                                        {/* Upload button */}
+                                        <label className="h-6 px-2 bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-bold rounded flex items-center justify-center cursor-pointer transition-colors border border-primary/20">
+                                          Upload
+                                          <input
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            onChange={async (e) => {
+                                              const file = e.target.files?.[0];
+                                              if (file) {
+                                                if (file.size > 2 * 1024 * 1024) {
+                                                  toast.error("File size exceeds 2MB limit!");
+                                                  return;
+                                                }
+                                                const formData = new FormData();
+                                                formData.append("image", file);
+                                                const toastId = toast.loading(`Uploading image for ${colorVal}...`);
+                                                try {
+                                                  const res = await uploadSingleImage(formData).unwrap();
+                                                  if (res?.success && res?.data?.url) {
+                                                    handleSetColorImage(colorVal, res.data.url);
+                                                    toast.success(`Image added for ${colorVal}!`, { id: toastId });
+                                                  } else {
+                                                    toast.error("Upload failed", { id: toastId });
+                                                  }
+                                                } catch (err: any) {
+                                                  showApiError(err, toastId);
+                                                }
+                                              }
+                                            }}
+                                          />
+                                        </label>
+                                        
+                                        {/* Paste URL Input */}
+                                        <input
+                                          type="url"
+                                          placeholder="Paste URL..."
+                                          value={colorImg}
+                                          onChange={(e) => handleSetColorImage(colorVal, e.target.value)}
+                                          className="flex-1 h-6 px-1.5 rounded border border-border bg-card text-[10px] outline-none focus:border-primary"
+                                        />
+
+                                        {colorImg && (
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setColorImages((prev) => {
+                                                const updated = { ...prev };
+                                                delete updated[colorVal];
+                                                return updated;
+                                              });
+                                              // Also remove it from variants
+                                              setVariants((prev) =>
+                                                prev.map((v) => {
+                                                  if (v.attributes && typeof v.attributes === "object") {
+                                                    const colorKey = Object.keys(v.attributes).find(
+                                                      (k) => k.toLowerCase().includes("color")
+                                                    );
+                                                    if (colorKey && v.attributes[colorKey] === colorVal) {
+                                                      const remaining = (v.images || []).filter((img: string) => img !== colorImg);
+                                                      return {
+                                                        ...v,
+                                                        images: remaining,
+                                                      };
+                                                    }
+                                                  }
+                                                  return v;
+                                                })
+                                              );
+                                              toast.success(`Removed image for ${colorVal}`);
+                                            }}
+                                            className="h-6 px-1.5 bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 text-[10px] font-bold rounded border border-rose-500/20 cursor-pointer"
+                                          >
+                                            Clear
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
                           </div>
                         )}
                       </div>

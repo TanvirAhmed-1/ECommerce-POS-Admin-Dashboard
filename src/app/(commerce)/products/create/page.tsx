@@ -741,6 +741,8 @@ function ProductFormContent() {
               imageUrls={imageUrls}
               isSaving={isSaving}
               handleSubmit={handleSubmit}
+              uploadSingleImage={uploadSingleImage}
+              showApiError={showApiError}
               setActiveTab={setActiveTab}
             />
           )}

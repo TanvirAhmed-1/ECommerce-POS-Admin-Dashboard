@@ -50,7 +50,8 @@ export const baseApi = createApi({
     "Slider",
     "Counter",
     "ServiceType",
-    "Card"
+    "Card",
+    "Payment"
   ],
   endpoints: () => ({}),
 });

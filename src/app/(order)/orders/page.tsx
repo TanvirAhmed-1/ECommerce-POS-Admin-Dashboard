@@ -41,6 +41,7 @@ const mockOrders = [
       name: "Tanvir Ahmed",
       email: "tanvir@example.com",
       phone: "+8801712345678",
+      role: "reseller",
     },
     shippingAddress: {
       fullName: "Tanvir Ahmed",
@@ -88,6 +89,7 @@ const mockOrders = [
       name: "Sajid Khan",
       email: "sajid@example.com",
       phone: "+8801811223344",
+      role: "customer",
     },
     shippingAddress: {
       fullName: "Sajid Khan",
@@ -124,6 +126,7 @@ const mockOrders = [
       name: "Aisha Siddika",
       email: "aisha@example.com",
       phone: "+8801999888777",
+      role: "customer",
     },
     shippingAddress: {
       fullName: "Aisha Siddika",
@@ -161,6 +164,7 @@ const mockOrders = [
       name: "Rahul Barua",
       email: "rahul@example.com",
       phone: "+8801555666777",
+      role: "customer",
     },
     shippingAddress: {
       fullName: "Rahul Barua",
@@ -360,6 +364,38 @@ export default function OrdersPage() {
     }
     return pages;
   }, [totalPages, currentPage]);
+
+  // User Role Badge Mapper
+  const getUserRoleBadge = (role: string) => {
+    const normalized = role?.toLowerCase() || "customer";
+    switch (normalized) {
+      case "superadmin":
+        return (
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-extrabold bg-violet-500/10 text-violet-600 dark:bg-violet-500/15 dark:text-violet-400 border border-violet-500/20">
+            Super Admin
+          </span>
+        );
+      case "admin":
+        return (
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-extrabold bg-indigo-500/10 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-400 border border-indigo-500/20">
+            Admin
+          </span>
+        );
+      case "reseller":
+        return (
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-extrabold bg-amber-500/10 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400 border border-amber-500/20">
+            Reseller
+          </span>
+        );
+      case "customer":
+      default:
+        return (
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-zinc-500/10 text-muted-foreground border border-border">
+            Customer
+          </span>
+        );
+    }
+  };
 
   // Status Color Mapper
   const getStatusBadge = (status: string) => {
@@ -678,6 +714,7 @@ export default function OrdersPage() {
                   <th className="p-4 font-bold uppercase text-[9px] tracking-wider w-24">Order ID</th>
                   <th className="p-4 font-bold uppercase text-[9px] tracking-wider w-16 text-center">Image</th>
                   <th className="p-4 font-bold uppercase text-[9px] tracking-wider">Customer</th>
+                  <th className="p-4 font-bold uppercase text-[9px] tracking-wider text-center w-20">Role</th>
                   <th className="p-4 font-bold uppercase text-[9px] tracking-wider">Primary Item</th>
                   <th className="p-4 font-bold uppercase text-[9px] tracking-wider">Payment</th>
                   <th className="p-4 font-bold uppercase text-[9px] tracking-wider">Date</th>
@@ -750,6 +787,11 @@ export default function OrdersPage() {
                           </div>
                         </td>
 
+                        {/* Customer Role */}
+                        <td className="p-4 text-center">
+                          {getUserRoleBadge(ord.user?.role)}
+                        </td>
+
                         {/* Purchased Items details */}
                         <td className="p-4">
                           <div className="flex flex-col min-w-0">
@@ -807,7 +849,7 @@ export default function OrdersPage() {
                   })
                 ) : (
                   <tr>
-                    <td colSpan={10} className="p-12 text-center text-muted-foreground space-y-2">
+                    <td colSpan={11} className="p-12 text-center text-muted-foreground space-y-2">
                       <ShoppingBag className="mx-auto text-muted/30" size={36} />
                       <p className="text-xs font-bold">No orders found</p>
                       <p className="text-[10px]">No orders matching the active tab filters were found in records.</p>
@@ -993,9 +1035,12 @@ export default function OrdersPage() {
                         {selectedOrder.shippingAddress?.fullName?.substring(0,2).toUpperCase() || "GC"}
                       </div>
                       <div>
-                        <h5 className="font-bold text-foreground text-sm">
-                          {selectedOrder.shippingAddress?.fullName || selectedOrder.user?.name || "Guest Customer"}
-                        </h5>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h5 className="font-bold text-foreground text-sm">
+                            {selectedOrder.shippingAddress?.fullName || selectedOrder.user?.name || "Guest Customer"}
+                          </h5>
+                          {selectedOrder.user?.role && getUserRoleBadge(selectedOrder.user.role)}
+                        </div>
                         <p className="text-[10px] text-muted-foreground">Registered Buyer Account</p>
                       </div>
                     </div>
