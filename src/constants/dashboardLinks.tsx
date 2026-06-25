@@ -107,6 +107,11 @@ export const zenithDashboardLinks: SidebarGroup[] = [
         icon: <Users size={18} />,
       },
       {
+        title: "Reviews",
+        route: "/reviews",
+        icon: <MessageSquare size={18} />,
+      },
+      {
         title: "Invoices",
         route: "/invoices",
         icon: <Receipt size={18} />,
