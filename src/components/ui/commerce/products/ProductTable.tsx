@@ -36,7 +36,7 @@ export default function ProductTable({
               <TableHead className="p-4 font-bold uppercase text-[10px] tracking-wider">Category</TableHead>
               <TableHead className="p-4 font-bold uppercase text-[10px] tracking-wider">Brand</TableHead>
               <TableHead className="p-4 font-bold uppercase text-[10px] tracking-wider">Status</TableHead>
-              <TableHead className="p-4 font-bold uppercase text-[10px] tracking-wider">Badges</TableHead>
+
               {activeSections.map((section: any) => (
                 <TableHead key={section._id} className="p-4 font-bold uppercase text-[10px] tracking-wider text-center">
                   {section.title}
@@ -111,61 +111,7 @@ export default function ProductTable({
                         {displayStatus}
                       </Badge>
                     </TableCell>
-                    <TableCell className="p-4">
-                      <div className="flex flex-wrap gap-1.5 max-w-[220px]">
-                        {/* Featured */}
-                        <button
-                          onClick={() => handleToggleBadge(prod, "isFeatured")}
-                          className={`px-2 py-0.5 text-[9px] font-bold rounded cursor-pointer transition-all border ${
-                            prod.isFeatured
-                              ? "bg-violet-500/10 border-violet-500/30 text-violet-600 dark:text-violet-400 hover:bg-violet-500/20"
-                              : "bg-transparent border-border text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                          }`}
-                          title="Toggle Featured status"
-                        >
-                          Featured
-                        </button>
 
-                        {/* Trending */}
-                        <button
-                          onClick={() => handleToggleBadge(prod, "isTrending")}
-                          className={`px-2 py-0.5 text-[9px] font-bold rounded cursor-pointer transition-all border ${
-                            prod.isTrending
-                              ? "bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20"
-                              : "bg-transparent border-border text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                          }`}
-                          title="Toggle Trending status"
-                        >
-                          Trending
-                        </button>
-
-                        {/* Best Seller */}
-                        <button
-                          onClick={() => handleToggleBadge(prod, "isBestSeller")}
-                          className={`px-2 py-0.5 text-[9px] font-bold rounded cursor-pointer transition-all border ${
-                            prod.isBestSeller
-                              ? "bg-cyan-500/10 border-cyan-500/30 text-cyan-600 dark:text-cyan-400 hover:bg-cyan-500/20"
-                              : "bg-transparent border-border text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                          }`}
-                          title="Toggle Best Seller status"
-                        >
-                          Best Seller
-                        </button>
-
-                        {/* New Arrival */}
-                        <button
-                          onClick={() => handleToggleBadge(prod, "isNewArrival")}
-                          className={`px-2 py-0.5 text-[9px] font-bold rounded cursor-pointer transition-all border ${
-                            prod.isNewArrival
-                              ? "bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20"
-                              : "bg-transparent border-border text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                          }`}
-                          title="Toggle New Arrival status"
-                        >
-                          New Arrival
-                        </button>
-                      </div>
-                    </TableCell>
                     {activeSections.map((section: any) => {
                       const isAssigned = (section.products || []).some(
                         (p: any) => p._id === prod._id || p._id === prod.id || p.id === prod._id

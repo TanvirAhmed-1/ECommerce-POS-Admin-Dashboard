@@ -181,10 +181,9 @@ function ProductFormContent() {
   const [isActive, setIsActive] = useState(true);
 
   // Design/Badge Fields
-  const [isFeatured, setIsFeatured] = useState(false);
-  const [isTrending, setIsTrending] = useState(false);
-  const [isBestSeller, setIsBestSeller] = useState(false);
-  const [isNewArrival, setIsNewArrival] = useState(false);
+  const [isRecommended, setIsRecommended] = useState(false);
+  const [isCategoryProduct, setIsCategoryProduct] = useState(false);
+  const [isTopSelling, setIsTopSelling] = useState(false);
 
   // Media (Thumbnail vs Images)
   const [thumbnail, setThumbnail] = useState("");
@@ -261,10 +260,9 @@ function ProductFormContent() {
         setVisibility(target.visibility || "published");
         setIsActive(target.isActive !== undefined ? target.isActive : true);
 
-        setIsFeatured(target.isFeatured || false);
-        setIsTrending(target.isTrending || false);
-        setIsBestSeller(target.isBestSeller || false);
-        setIsNewArrival(target.isNewArrival || false);
+        setIsRecommended(target.isRecommended || false);
+        setIsCategoryProduct(target.isCategoryProduct || false);
+        setIsTopSelling(target.isTopSelling || false);
 
         setThumbnail(target.thumbnail || "");
         setImageUrls(target.images || []);
@@ -524,10 +522,9 @@ function ProductFormContent() {
         };
       }) : undefined,
 
-      isFeatured,
-      isTrending,
-      isBestSeller,
-      isNewArrival,
+      isRecommended,
+      isCategoryProduct,
+      isTopSelling,
 
       visibility,
       isActive,
@@ -764,14 +761,12 @@ function ProductFormContent() {
             brands={brands}
             isActive={isActive}
             setIsActive={setIsActive}
-            isFeatured={isFeatured}
-            setIsFeatured={setIsFeatured}
-            isTrending={isTrending}
-            setIsTrending={setIsTrending}
-            isBestSeller={isBestSeller}
-            setIsBestSeller={setIsBestSeller}
-            isNewArrival={isNewArrival}
-            setIsNewArrival={setIsNewArrival}
+            isRecommended={isRecommended}
+            setIsRecommended={setIsRecommended}
+            isCategoryProduct={isCategoryProduct}
+            setIsCategoryProduct={setIsCategoryProduct}
+            isTopSelling={isTopSelling}
+            setIsTopSelling={setIsTopSelling}
             setShowCategoryModal={setShowCategoryModal}
             setShowBrandModal={setShowBrandModal}
           />

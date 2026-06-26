@@ -71,6 +71,7 @@ export default function CMSPagesPage() {
   const [content, setContent] = useState("");
   const [group, setGroup] = useState("Quick Links");
   const [isActive, setIsActive] = useState(true);
+  const [showNavbar, setShowNavbar] = useState(false);
   
   // SEO fields
   const [metaTitle, setMetaTitle] = useState("");
@@ -108,6 +109,7 @@ export default function CMSPagesPage() {
     setContent("");
     setGroup("Quick Links");
     setIsActive(true);
+    setShowNavbar(false);
     setMetaTitle("");
     setMetaDescription("");
     setMetaKeywords("");
@@ -123,6 +125,7 @@ export default function CMSPagesPage() {
     setContent(page.content);
     setGroup(page.group || "Quick Links");
     setIsActive(page.isActive !== undefined ? page.isActive : true);
+    setShowNavbar(page.showNavbar !== undefined ? page.showNavbar : false);
     setMetaTitle(page.seo?.metaTitle || "");
     setMetaDescription(page.seo?.metaDescription || "");
     setMetaKeywords(page.seo?.metaKeywords?.join(", ") || "");
@@ -161,6 +164,7 @@ export default function CMSPagesPage() {
       content,
       group,
       isActive,
+      showNavbar,
       seo: {
         metaTitle,
         metaDescription,
@@ -230,6 +234,7 @@ export default function CMSPagesPage() {
                     <tr className="border-b border-border text-muted-foreground font-semibold">
                       <th className="py-3 pr-2 font-bold uppercase text-[9px] tracking-wider">Title & Slug</th>
                       <th className="py-3 px-2 font-bold uppercase text-[9px] tracking-wider">Group</th>
+                      <th className="py-3 px-2 font-bold uppercase text-[9px] tracking-wider text-center">Show Navbar</th>
                       <th className="py-3 px-2 font-bold uppercase text-[9px] tracking-wider text-center">Status</th>
                       <th className="py-3 pl-2 font-bold uppercase text-[9px] tracking-wider text-right">Actions</th>
                     </tr>
@@ -246,6 +251,17 @@ export default function CMSPagesPage() {
                         <td className="py-3.5 px-2">
                           <span className="px-2 py-0.5 rounded bg-muted text-[10px] font-bold text-muted-foreground">
                             {p.group}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-2 text-center">
+                          <span
+                            className={`px-2.5 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider ${
+                              p.showNavbar
+                                ? "bg-violet-500/10 text-violet-600 dark:bg-violet-500/15 dark:text-violet-400"
+                                : "bg-zinc-100 dark:bg-zinc-800 text-muted-foreground"
+                            }`}
+                          >
+                            {p.showNavbar ? "Yes" : "No"}
                           </span>
                         </td>
                         <td className="py-3.5 px-2 text-center">
@@ -371,18 +387,32 @@ export default function CMSPagesPage() {
                   </div>
                 </div>
 
-                {/* Active Status */}
-                <div className="flex items-center gap-2 pt-1">
-                  <input
-                    type="checkbox"
-                    id="isActiveCheck"
-                    checked={isActive}
-                    onChange={(e) => setIsActive(e.target.checked)}
-                    className="w-4 h-4 rounded border-border text-primary focus:ring-0 cursor-pointer"
-                  />
-                  <label htmlFor="isActiveCheck" className="text-xs font-semibold text-foreground cursor-pointer select-none">
-                    Publish immediately (Active status)
-                  </label>
+                {/* Active Status & Show in Navbar */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="isActiveCheck"
+                      checked={isActive}
+                      onChange={(e) => setIsActive(e.target.checked)}
+                      className="w-4 h-4 rounded border-border text-primary focus:ring-0 cursor-pointer"
+                    />
+                    <label htmlFor="isActiveCheck" className="text-xs font-semibold text-foreground cursor-pointer select-none">
+                      Publish immediately
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="showNavbarCheck"
+                      checked={showNavbar}
+                      onChange={(e) => setShowNavbar(e.target.checked)}
+                      className="w-4 h-4 rounded border-border text-primary focus:ring-0 cursor-pointer"
+                    />
+                    <label htmlFor="showNavbarCheck" className="text-xs font-semibold text-foreground cursor-pointer select-none">
+                      Show in Navbar
+                    </label>
+                  </div>
                 </div>
 
                 {/* Content */}

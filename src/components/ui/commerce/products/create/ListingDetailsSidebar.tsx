@@ -1,5 +1,5 @@
 import React from "react";
-import { Settings, Eye, FolderTree, Plus, Tag, Award, Flame, ShieldCheck, Activity } from "lucide-react";
+import { Settings, Eye, FolderTree, Plus, Tag, Award, Flame, ThumbsUp, TrendingUp, Grid } from "lucide-react";
 
 interface ListingDetailsSidebarProps {
   visibility: "published" | "hidden" | "out_of_stock";
@@ -15,14 +15,12 @@ interface ListingDetailsSidebarProps {
   brands: any[];
   isActive: boolean;
   setIsActive: (val: boolean) => void;
-  isFeatured: boolean;
-  setIsFeatured: (val: boolean) => void;
-  isTrending: boolean;
-  setIsTrending: (val: boolean) => void;
-  isBestSeller: boolean;
-  setIsBestSeller: (val: boolean) => void;
-  isNewArrival: boolean;
-  setIsNewArrival: (val: boolean) => void;
+  isRecommended: boolean;
+  setIsRecommended: (val: boolean) => void;
+  isCategoryProduct: boolean;
+  setIsCategoryProduct: (val: boolean) => void;
+  isTopSelling: boolean;
+  setIsTopSelling: (val: boolean) => void;
   setShowCategoryModal: (val: boolean) => void;
   setShowBrandModal: (val: boolean) => void;
 }
@@ -41,14 +39,12 @@ export default function ListingDetailsSidebar({
   brands,
   isActive,
   setIsActive,
-  isFeatured,
-  setIsFeatured,
-  isTrending,
-  setIsTrending,
-  isBestSeller,
-  setIsBestSeller,
-  isNewArrival,
-  setIsNewArrival,
+  isRecommended,
+  setIsRecommended,
+  isCategoryProduct,
+  setIsCategoryProduct,
+  isTopSelling,
+  setIsTopSelling,
   setShowCategoryModal,
   setShowBrandModal,
 }: ListingDetailsSidebarProps) {
@@ -172,45 +168,35 @@ export default function ListingDetailsSidebar({
           </div>
         </label>
 
-        <div className="grid grid-cols-2 gap-2">
-          <label className="flex items-center gap-2 p-2 rounded-xl border border-border bg-card cursor-pointer hover:bg-muted/10 transition-all select-none">
+        <div className="grid grid-cols-1 gap-2">
+          <label className="flex items-center gap-2.5 p-2 rounded-xl border border-border bg-card cursor-pointer hover:bg-muted/10 transition-all select-none">
             <input
               type="checkbox"
-              checked={isFeatured}
-              onChange={(e) => setIsFeatured(e.target.checked)}
-              className="rounded border-border text-primary"
+              checked={isRecommended}
+              onChange={(e) => setIsRecommended(e.target.checked)}
+              className="rounded border-border text-primary cursor-pointer"
             />
-            <span className="text-[9px] font-bold text-foreground flex items-center gap-0.5"><Award size={10} /> Featured</span>
+            <span className="text-[9px] font-bold text-foreground flex items-center gap-1"><ThumbsUp size={11} className="text-violet-500" /> Recommended Product</span>
           </label>
 
-          <label className="flex items-center gap-2 p-2 rounded-xl border border-border bg-card cursor-pointer hover:bg-muted/10 transition-all select-none">
+          <label className="flex items-center gap-2.5 p-2 rounded-xl border border-border bg-card cursor-pointer hover:bg-muted/10 transition-all select-none">
             <input
               type="checkbox"
-              checked={isTrending}
-              onChange={(e) => setIsTrending(e.target.checked)}
-              className="rounded border-border text-primary"
+              checked={isCategoryProduct}
+              onChange={(e) => setIsCategoryProduct(e.target.checked)}
+              className="rounded border-border text-primary cursor-pointer"
             />
-            <span className="text-[9px] font-bold text-foreground flex items-center gap-0.5"><Flame size={10} /> Trending</span>
+            <span className="text-[9px] font-bold text-foreground flex items-center gap-1"><Grid size={11} className="text-cyan-500" /> Category Product</span>
           </label>
 
-          <label className="flex items-center gap-2 p-2 rounded-xl border border-border bg-card cursor-pointer hover:bg-muted/10 transition-all select-none">
+          <label className="flex items-center gap-2.5 p-2 rounded-xl border border-border bg-card cursor-pointer hover:bg-muted/10 transition-all select-none">
             <input
               type="checkbox"
-              checked={isBestSeller}
-              onChange={(e) => setIsBestSeller(e.target.checked)}
-              className="rounded border-border text-primary"
+              checked={isTopSelling}
+              onChange={(e) => setIsTopSelling(e.target.checked)}
+              className="rounded border-border text-primary cursor-pointer"
             />
-            <span className="text-[9px] font-bold text-foreground flex items-center gap-0.5"><ShieldCheck size={10} /> Best Seller</span>
-          </label>
-
-          <label className="flex items-center gap-2 p-2 rounded-xl border border-border bg-card cursor-pointer hover:bg-muted/10 transition-all select-none">
-            <input
-              type="checkbox"
-              checked={isNewArrival}
-              onChange={(e) => setIsNewArrival(e.target.checked)}
-              className="rounded border-border text-primary"
-            />
-            <span className="text-[9px] font-bold text-foreground flex items-center gap-0.5"><Activity size={10} /> New Arrival</span>
+            <span className="text-[9px] font-bold text-foreground flex items-center gap-1"><TrendingUp size={11} className="text-amber-500" /> Top Selling</span>
           </label>
         </div>
       </div>
