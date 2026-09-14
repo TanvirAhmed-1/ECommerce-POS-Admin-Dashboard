@@ -159,14 +159,23 @@ function ProductFormContent() {
 
   // Form Field States
   const [name, setName] = useState("");
+  const [productCode, setProductCode] = useState("");
+  const [materials, setMaterials] = useState("");
+  const [unitMeasure, setUnitMeasure] = useState("pcs");
+  const [gender, setGender] = useState("all");
+  const [barcode, setBarcode] = useState("");
+  const [weight, setWeight] = useState<number | "">("");
   const [slug, setSlug] = useState("");
   const [shortDescription, setShortDescription] = useState("");
   const [description, setDescription] = useState("");
 
   // Pricing & Stock
+  const [purchasePrice, setPurchasePrice] = useState<number | "">("");
+  const [wholesalePrice, setWholesalePrice] = useState<number | "">("");
   const [basePrice, setBasePrice] = useState<number | "">("");
   const [salePrice, setSalePrice] = useState<number | "">("");
   const [resellerPrice, setResellerPrice] = useState<number | "">(0);
+  const [vatType, setVatType] = useState<"percentage" | "flat">("percentage");
   const [discountType, setDiscountType] = useState<"flat" | "percentage">("flat");
   const [productDiscount, setProductDiscount] = useState<number | "">(0);
   const [vat, setVat] = useState<number>(0);
@@ -239,15 +248,24 @@ function ProductFormContent() {
 
       if (target) {
         setName(target.name || "");
+        setProductCode(target.productCode || "");
+        setMaterials(target.materials || "");
+        setUnitMeasure(target.unitMeasure || "pcs");
+        setGender(target.gender || "all");
+        setBarcode(target.barcode || "");
+        setWeight(target.weight !== undefined ? target.weight : "");
         setSlug(target.slug || "");
         setShortDescription(target.shortDescription || "");
         setDescription(target.description || "");
 
+        setPurchasePrice(target.purchasePrice !== undefined ? target.purchasePrice : "");
+        setWholesalePrice(target.wholesalePrice !== undefined ? target.wholesalePrice : (target.resellerPrice !== undefined ? target.resellerPrice : ""));
         setBasePrice(target.basePrice !== undefined ? target.basePrice : "");
         setSalePrice(target.salePrice !== undefined ? target.salePrice : "");
-        setResellerPrice(target.resellerPrice !== undefined ? target.resellerPrice : 0);
+        setResellerPrice(target.resellerPrice !== undefined ? target.resellerPrice : (target.wholesalePrice !== undefined ? target.wholesalePrice : 0));
         setDiscountType(target.discountType || "flat");
         setProductDiscount(target.productDiscount !== undefined ? target.productDiscount : 0);
+        setVatType(target.vatType || "percentage");
         setVat(target.vat !== undefined ? target.vat : 0);
 
         setBaseStock(target.totalStock !== undefined ? target.totalStock : (target.stock || ""));
@@ -443,26 +461,15 @@ function ProductFormContent() {
       toast.error("Thumbnail image is required!");
       return;
     }
-    if (basePrice === "") {
-      toast.error("Base price is required!");
+    if (salePrice === "" || Number(salePrice) < 0) {
+      toast.error("Sell price is required!");
       return;
     }
-    if (resellerPrice === "") {
-      toast.error("Reseller price is required!");
-      return;
-    }
-    if (Number(resellerPrice) <= Number(basePrice)) {
-      toast.error("Reseller price must be greater than base price!");
-      return;
-    }
-    if (salePrice === "") {
-      toast.error("Sale price is required!");
-      return;
-    }
-    if (Number(salePrice) <= Number(resellerPrice)) {
-      toast.error("Sale price must be greater than reseller price!");
-      return;
-    }
+
+    const finalWholesale = wholesalePrice !== "" ? Number(wholesalePrice) : (resellerPrice !== "" ? Number(resellerPrice) : 0);
+    const finalSale = Number(salePrice);
+    const finalBase = basePrice !== "" ? Number(basePrice) : finalSale;
+    const finalPurchase = purchasePrice !== "" ? Number(purchasePrice) : 0;
 
     const toastId = toast.loading(editId ? "Updating product..." : "Saving new product...");
 
@@ -473,6 +480,7 @@ function ProductFormContent() {
 
     const payload = {
       name: name.trim(),
+      productCode: productCode.trim() || undefined,
       slug: slug.trim() || slugifyString(name),
       shortDescription: shortDescription.trim(),
       description: description.trim() || undefined,
@@ -481,14 +489,23 @@ function ProductFormContent() {
       subcategory: subcategory || undefined,
       brand: brand || undefined,
 
+      materials: materials.trim() || undefined,
+      unitMeasure: unitMeasure || "pcs",
+      gender: gender || "all",
+      barcode: barcode.trim() || undefined,
+      weight: weight !== "" ? Number(weight) : undefined,
+
       thumbnail: thumbnail.trim(),
       images: imageUrls,
 
-      basePrice: Number(basePrice),
-      salePrice: Number(salePrice),
-      resellerPrice: Number(resellerPrice),
+      purchasePrice: finalPurchase,
+      wholesalePrice: finalWholesale,
+      resellerPrice: finalWholesale,
+      basePrice: finalBase,
+      salePrice: finalSale,
       discountType,
       productDiscount: Number(productDiscount) || 0,
+      vatType,
       vat: Number(vat) || 0,
 
       hasVariants: variants.length > 0,
@@ -650,16 +667,39 @@ function ProductFormContent() {
             <GeneralTab
               name={name}
               setName={setName}
+              productCode={productCode}
+              setProductCode={setProductCode}
+              category={category}
+              setCategory={setCategory}
+              subcategory={subcategory}
+              setSubcategory={setSubcategory}
+              parentCategories={parentCategories}
+              subcategories={subcategories}
+              setShowCategoryModal={setShowCategoryModal}
+              brand={brand}
+              setBrand={setBrand}
+              brands={brands}
+              setShowBrandModal={setShowBrandModal}
+              materials={materials}
+              setMaterials={setMaterials}
+              unitMeasure={unitMeasure}
+              setUnitMeasure={setUnitMeasure}
+              gender={gender}
+              setGender={setGender}
               slug={slug}
               setSlug={setSlug}
-              shortDescription={shortDescription}
-              setShortDescription={setShortDescription}
-              description={description}
-              setDescription={setDescription}
               isSlugManuallyEdited={isSlugManuallyEdited}
               setIsSlugManuallyEdited={setIsSlugManuallyEdited}
               baseSku={baseSku}
               setBaseSku={setBaseSku}
+              barcode={barcode}
+              setBarcode={setBarcode}
+              weight={weight}
+              setWeight={setWeight}
+              shortDescription={shortDescription}
+              setShortDescription={setShortDescription}
+              description={description}
+              setDescription={setDescription}
               setActiveTab={setActiveTab}
             />
           )}
@@ -689,16 +729,19 @@ function ProductFormContent() {
 
           {activeTab === "pricing" && (
             <PricingTab
-              basePrice={basePrice}
-              setBasePrice={setBasePrice}
+              purchasePrice={purchasePrice}
+              setPurchasePrice={setPurchasePrice}
+              wholesalePrice={wholesalePrice}
+              setWholesalePrice={(val) => {
+                setWholesalePrice(val);
+                setResellerPrice(val);
+              }}
               salePrice={salePrice}
               setSalePrice={setSalePrice}
-              resellerPrice={resellerPrice}
-              setResellerPrice={setResellerPrice}
-              discountType={discountType}
-              setDiscountType={setDiscountType}
-              productDiscount={productDiscount}
-              setProductDiscount={setProductDiscount}
+              basePrice={basePrice}
+              setBasePrice={setBasePrice}
+              vatType={vatType}
+              setVatType={setVatType}
               vat={vat}
               setVat={setVat}
               baseStock={baseStock}

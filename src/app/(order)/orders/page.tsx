@@ -31,6 +31,7 @@ import {
   Truck,
   Package,
 } from "lucide-react";
+import OrderDetailsModal from "@/components/ui/commerce/orders/OrderDetailsModal";
 
 // Mock orders fallback in case database is empty
 const mockOrders = [
@@ -51,8 +52,8 @@ const mockOrders = [
     },
     items: [
       {
-        product: { 
-          name: "Premium Leather Wallet", 
+        product: {
+          name: "Premium Leather Wallet",
           slug: "leather-wallet",
           thumbnail: "https://images.unsplash.com/photo-1627124712836-31c19b0b467e?q=80&w=200"
         },
@@ -61,8 +62,8 @@ const mockOrders = [
         price: 45,
       },
       {
-        product: { 
-          name: "Minimalist Watch", 
+        product: {
+          name: "Minimalist Watch",
           slug: "minimalist-watch",
           thumbnail: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=200"
         },
@@ -99,8 +100,8 @@ const mockOrders = [
     },
     items: [
       {
-        product: { 
-          name: "Wireless Earbuds Pro", 
+        product: {
+          name: "Wireless Earbuds Pro",
           slug: "wireless-earbuds-pro",
           thumbnail: "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?q=80&w=200"
         },
@@ -136,8 +137,8 @@ const mockOrders = [
     },
     items: [
       {
-        product: { 
-          name: "Mechanical Keyboard", 
+        product: {
+          name: "Mechanical Keyboard",
           slug: "mechanical-keyboard",
           thumbnail: "https://images.unsplash.com/photo-1587829741301-dc798b83add3?q=80&w=200"
         },
@@ -174,8 +175,8 @@ const mockOrders = [
     },
     items: [
       {
-        product: { 
-          name: "Gaming Mouse Pad", 
+        product: {
+          name: "Gaming Mouse Pad",
           slug: "gaming-mouse-pad",
           thumbnail: "https://images.unsplash.com/photo-1616499389997-4818867a6590?q=80&w=200"
         },
@@ -201,6 +202,7 @@ export default function OrdersPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
+  const [confirmModalOrder, setConfirmModalOrder] = useState<any | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; orderNumber: string } | null>(null);
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -238,7 +240,7 @@ export default function OrdersPage() {
   // Parse Orders list from backend or mock
   const orders = useMemo(() => {
     const apiOrders = ordersRes?.data?.data || ordersRes?.data || [];
-    
+
     if (Array.isArray(apiOrders) && apiOrders.length > 0) {
       return apiOrders.map((ord: any, idx: number) => {
         const id = ord._id ? `ORD-${ord._id.slice(-6).toUpperCase()}` : `ORD-${8000 + idx}`;
@@ -313,7 +315,7 @@ export default function OrdersPage() {
     if (!isMock && ordersRes?.data?.meta?.totalPage !== undefined) {
       return ordersRes.data.meta.totalPage;
     }
-    
+
     // For mock data
     const filteredCount = mockOrders.filter((ord: any) => {
       const matchesTab = activeTab === "All" || ord.orderStatus?.toLowerCase() === activeTab.toLowerCase();
@@ -321,7 +323,7 @@ export default function OrdersPage() {
         (ord.shippingAddress?.fullName || "").toLowerCase().includes(searchQuery.toLowerCase());
       return matchesTab && matchesSearch;
     }).length;
-    
+
     return Math.max(1, Math.ceil(filteredCount / itemsPerPage));
   }, [ordersRes, isMock, activeTab, searchQuery, itemsPerPage]);
 
@@ -329,7 +331,7 @@ export default function OrdersPage() {
     if (!isMock && ordersRes?.data?.meta?.total !== undefined) {
       return ordersRes.data.meta.total;
     }
-    
+
     // For mock data
     return mockOrders.filter((ord: any) => {
       const matchesTab = activeTab === "All" || ord.orderStatus?.toLowerCase() === activeTab.toLowerCase();
@@ -365,37 +367,7 @@ export default function OrdersPage() {
     return pages;
   }, [totalPages, currentPage]);
 
-  // User Role Badge Mapper
-  const getUserRoleBadge = (role: string) => {
-    const normalized = role?.toLowerCase() || "customer";
-    switch (normalized) {
-      case "superadmin":
-        return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-extrabold bg-violet-500/10 text-violet-600 dark:bg-violet-500/15 dark:text-violet-400 border border-violet-500/20">
-            Super Admin
-          </span>
-        );
-      case "admin":
-        return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-extrabold bg-indigo-500/10 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-400 border border-indigo-500/20">
-            Admin
-          </span>
-        );
-      case "reseller":
-        return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-extrabold bg-amber-500/10 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400 border border-amber-500/20">
-            Reseller
-          </span>
-        );
-      case "customer":
-      default:
-        return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-zinc-500/10 text-muted-foreground border border-border">
-            Customer
-          </span>
-        );
-    }
-  };
+
 
   // Status Color Mapper
   const getStatusBadge = (status: string) => {
@@ -498,6 +470,29 @@ export default function OrdersPage() {
     } catch (err: any) {
       console.error(err);
       toast.error(err?.data?.message || err?.message || "Failed to update order status.", { id: toastId });
+    }
+  };
+
+  // Direct modal order status change
+  const handleModalStatusChange = async (orderId: string, status: string) => {
+    const isMock = orderId.startsWith("mock");
+    const toastId = toast.loading(`Updating order status to ${status}...`);
+    try {
+      if (isMock) {
+        setConfirmModalOrder((prev: any) => (prev ? { ...prev, orderStatus: status } : null));
+        setSelectedOrder((prev: any) => (prev && prev._id === orderId ? { ...prev, orderStatus: status } : prev));
+        toast.success(`Mock status updated to ${status}`, { id: toastId });
+        return;
+      }
+
+      await updateOrderStatus({ id: orderId, status }).unwrap();
+      setConfirmModalOrder((prev: any) => (prev ? { ...prev, orderStatus: status } : null));
+      setSelectedOrder((prev: any) => (prev && prev._id === orderId ? { ...prev, orderStatus: status } : prev));
+      toast.success(`Order successfully marked as ${status}!`, { id: toastId });
+      refetch();
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err?.data?.message || err?.message || "Failed to update status.", { id: toastId });
     }
   };
 
@@ -614,7 +609,7 @@ export default function OrdersPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6 animate-fade-in max-w-[1600px] mx-auto p-1 md:p-6">
-        
+
         {/* Breadcrumb & Title */}
         <div className="space-y-1">
           <div className="flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
@@ -681,11 +676,10 @@ export default function OrdersPage() {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-3 py-1 text-xs font-semibold rounded-md cursor-pointer transition-all shrink-0 ${
-                  activeTab === tab
-                    ? "bg-white text-black dark:bg-zinc-800 dark:text-white shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
+                className={`px-3 py-1 text-xs font-semibold rounded-md cursor-pointer transition-all shrink-0 ${activeTab === tab
+                  ? "bg-white text-black dark:bg-zinc-800 dark:text-white shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+                  }`}
               >
                 {tab}
               </button>
@@ -711,10 +705,9 @@ export default function OrdersPage() {
               <thead>
                 <tr className="border-b border-border bg-muted/30 text-muted-foreground font-bold">
                   <th className="p-4 font-bold uppercase text-[9px] tracking-wider w-12 text-center">SL</th>
-                  <th className="p-4 font-bold uppercase text-[9px] tracking-wider w-24">Order ID</th>
                   <th className="p-4 font-bold uppercase text-[9px] tracking-wider w-16 text-center">Image</th>
+                  <th className="p-4 font-bold uppercase text-[9px] tracking-wider w-24">Order ID</th>
                   <th className="p-4 font-bold uppercase text-[9px] tracking-wider">Customer</th>
-                  <th className="p-4 font-bold uppercase text-[9px] tracking-wider text-center w-20">Role</th>
                   <th className="p-4 font-bold uppercase text-[9px] tracking-wider">Primary Item</th>
                   <th className="p-4 font-bold uppercase text-[9px] tracking-wider">Payment</th>
                   <th className="p-4 font-bold uppercase text-[9px] tracking-wider">Date</th>
@@ -736,12 +729,12 @@ export default function OrdersPage() {
 
                     const formattedDate = ord.createdAt
                       ? new Date(ord.createdAt).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })
                       : "N/A";
 
                     const slIndex = (currentPage - 1) * itemsPerPage + idx + 1;
@@ -749,16 +742,13 @@ export default function OrdersPage() {
                     return (
                       <tr
                         key={ord._id || ord.id}
-                        onClick={() => setSelectedOrder(ord)}
+                        onClick={() => setConfirmModalOrder(ord)}
                         className={`hover:bg-muted/30 transition-colors group cursor-pointer ${
-                          selectedOrder?._id === ord._id ? "bg-primary/5 dark:bg-primary/10" : ""
+                          confirmModalOrder?._id === ord._id ? "bg-primary/5 dark:bg-primary/10" : ""
                         }`}
                       >
                         {/* SL */}
                         <td className="p-4 text-center font-bold text-muted-foreground w-12">{slIndex}</td>
-
-                        {/* Visual ID */}
-                        <td className="p-4 font-bold text-foreground">{ord.id}</td>
 
                         {/* Product Image */}
                         <td className="p-4 text-center w-16">
@@ -778,6 +768,9 @@ export default function OrdersPage() {
                           </div>
                         </td>
 
+                        {/* Visual ID */}
+                        <td className="p-4 font-bold text-foreground">{ord.id}</td>
+
                         {/* Customer Info */}
                         <td className="p-4">
                           <div className="flex flex-col min-w-0">
@@ -785,11 +778,6 @@ export default function OrdersPage() {
                             <span className="text-[10px] text-muted-foreground truncate">{email}</span>
                             <span className="text-[9px] text-muted-foreground/80 font-mono mt-0.5">{phone}</span>
                           </div>
-                        </td>
-
-                        {/* Customer Role */}
-                        <td className="p-4 text-center">
-                          {getUserRoleBadge(ord.user?.role)}
                         </td>
 
                         {/* Purchased Items details */}
@@ -827,20 +815,28 @@ export default function OrdersPage() {
 
                         {/* Actions */}
                         <td className="p-4" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center justify-center gap-2">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <button
+                              onClick={() => setConfirmModalOrder(ord)}
+                              className="px-2.5 py-1 text-[10px] font-bold rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all flex items-center gap-1 cursor-pointer border border-primary/20"
+                              title="Inspect Variant Stock & Confirm Order"
+                            >
+                              <Eye size={12} />
+                              <span>Details & Stock</span>
+                            </button>
                             <button
                               onClick={() => setSelectedOrder(ord)}
                               className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md cursor-pointer transition-colors"
-                              title="View Invoice Details"
+                              title="View Invoice Drawer"
                             >
-                              <Eye size={14} />
+                              <Sliders size={13} />
                             </button>
                             <button
                               onClick={(e) => handleDeleteClick(ord._id, ord.id, e)}
                               className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md cursor-pointer transition-colors"
                               title="Delete Order"
                             >
-                              <Trash2 size={14} />
+                              <Trash2 size={13} />
                             </button>
                           </div>
                         </td>
@@ -913,11 +909,10 @@ export default function OrdersPage() {
                     <button
                       key={pageNum}
                       onClick={() => setCurrentPage(pageNum)}
-                      className={`w-8 h-8 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                        currentPage === pageNum
-                          ? "bg-primary text-white shadow-sm shadow-primary/20"
-                          : "border border-border bg-card text-foreground hover:bg-muted"
-                      }`}
+                      className={`w-8 h-8 rounded-lg text-xs font-bold transition-all cursor-pointer ${currentPage === pageNum
+                        ? "bg-primary text-white shadow-sm shadow-primary/20"
+                        : "border border-border bg-card text-foreground hover:bg-muted"
+                        }`}
                     >
                       {pageNum}
                     </button>
@@ -948,7 +943,7 @@ export default function OrdersPage() {
 
             {/* Slide-over Card panel */}
             <div className="relative w-full max-w-lg bg-background border-l border-border h-full flex flex-col shadow-2xl z-10 animate-slide-in">
-              
+
               {/* Drawer Header */}
               <div className="p-5 border-b border-border flex items-center justify-between bg-muted/20">
                 <div className="space-y-0.5">
@@ -968,7 +963,7 @@ export default function OrdersPage() {
 
               {/* Drawer Body Scroll */}
               <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar text-xs">
-                
+
                 {/* Status Update Block */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="p-4 rounded-xl border border-primary/15 bg-primary/5 dark:bg-primary/10 space-y-3">
@@ -1032,14 +1027,13 @@ export default function OrdersPage() {
                   <div className="glass-card rounded-xl border border-border p-4 space-y-3 bg-muted/10">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-primary/10 text-primary font-black text-xs flex items-center justify-center shrink-0">
-                        {selectedOrder.shippingAddress?.fullName?.substring(0,2).toUpperCase() || "GC"}
+                        {selectedOrder.shippingAddress?.fullName?.substring(0, 2).toUpperCase() || "GC"}
                       </div>
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
                           <h5 className="font-bold text-foreground text-sm">
                             {selectedOrder.shippingAddress?.fullName || selectedOrder.user?.name || "Guest Customer"}
                           </h5>
-                          {selectedOrder.user?.role && getUserRoleBadge(selectedOrder.user.role)}
                         </div>
                         <p className="text-[10px] text-muted-foreground">Registered Buyer Account</p>
                       </div>
@@ -1117,7 +1111,7 @@ export default function OrdersPage() {
                     Billing & Payment Information
                   </h4>
                   <div className="glass-card rounded-xl border border-border p-4 bg-muted/5 space-y-3">
-                    
+
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-1">
                         <span className="text-muted-foreground font-bold uppercase text-[9px] tracking-wider block">Payment Gateway</span>
@@ -1219,6 +1213,14 @@ export default function OrdersPage() {
             </div>
           </div>
         )}
+
+        {/* Order Details & Stock Verification Modal */}
+        <OrderDetailsModal
+          order={confirmModalOrder}
+          onClose={() => setConfirmModalOrder(null)}
+          onUpdateStatus={handleModalStatusChange}
+          isUpdatingStatus={isUpdating}
+        />
 
       </div>
     </DashboardLayout>
