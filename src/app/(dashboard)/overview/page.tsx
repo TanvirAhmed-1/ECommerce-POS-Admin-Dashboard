@@ -17,14 +17,90 @@ import {
   ChevronRight,
   Sparkles,
   Search,
+  Calendar,
+  Filter,
+  RotateCcw,
+  Check,
 } from "lucide-react";
 
+type DatePreset = "all" | "today" | "yesterday" | "week" | "month" | "last_month" | "year" | "custom";
+
+const formatDateToInput = (d: Date) => {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const getPresetDates = (preset: DatePreset): { start: string; end: string } => {
+  const now = new Date();
+  switch (preset) {
+    case "all":
+      return { start: "", end: "" };
+    case "today": {
+      const s = formatDateToInput(now);
+      return { start: s, end: s };
+    }
+    case "yesterday": {
+      const y = new Date(now);
+      y.setDate(y.getDate() - 1);
+      const s = formatDateToInput(y);
+      return { start: s, end: s };
+    }
+    case "week": {
+      const w = new Date(now);
+      w.setDate(w.getDate() - 6);
+      return { start: formatDateToInput(w), end: formatDateToInput(now) };
+    }
+    case "month": {
+      const first = new Date(now.getFullYear(), now.getMonth(), 1);
+      return { start: formatDateToInput(first), end: formatDateToInput(now) };
+    }
+    case "last_month": {
+      const first = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const last = new Date(now.getFullYear(), now.getMonth(), 0);
+      return { start: formatDateToInput(first), end: formatDateToInput(last) };
+    }
+    case "year": {
+      const first = new Date(now.getFullYear(), 0, 1);
+      return { start: formatDateToInput(first), end: formatDateToInput(now) };
+    }
+    default:
+      return { start: "", end: "" };
+  }
+};
+
 export default function OverviewPage() {
-  const { data: overviewRes, isLoading, refetch } = useGetOverviewQuery({});
+  const [datePreset, setDatePreset] = useState<DatePreset>("all");
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
+
+  const queryParams = useMemo(() => {
+    const params: Record<string, string> = {};
+    if (startDate) params.startDate = startDate;
+    if (endDate) params.endDate = endDate;
+    return params;
+  }, [startDate, endDate]);
+
+  const { data: overviewRes, isLoading, isFetching, refetch } = useGetOverviewQuery(queryParams);
   const overviewData = overviewRes?.data;
 
   const [activeSegment, setActiveSegment] = useState<"revenue" | "orders" | "profit">("revenue");
   const [accentColor, setAccentColor] = useState("#4f46e5");
+
+  const handlePresetChange = (preset: DatePreset) => {
+    setDatePreset(preset);
+    if (preset === "custom") return;
+    const { start, end } = getPresetDates(preset);
+    setStartDate(start);
+    setEndDate(end);
+  };
+
+  const handleResetDateFilter = () => {
+    setDatePreset("all");
+    setStartDate("");
+    setEndDate("");
+  };
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -127,13 +203,117 @@ export default function OverviewPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 animate-fade-in">
-        {/* Page Header */}
-        <div>
-          <h2 className="text-2xl font-bold font-heading text-foreground">Dashboard</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Welcome back, Aigars. Here's what's happening with your business today.
-          </p>
+      <div className="space-y-6 animate-fade-in max-w-[1600px] mx-auto p-1 md:p-6">
+        {/* Page Header & Date Range Filter Bar */}
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+                <span>Overview</span>
+                <span className="opacity-50">/</span>
+                <span className="text-foreground">Dashboard</span>
+              </div>
+              <h2 className="text-2xl font-black font-heading text-foreground tracking-tight flex items-center gap-2 mt-1">
+                <span>Executive Commerce Dashboard</span>
+                {isFetching && (
+                  <span className="inline-block w-2 h-2 rounded-full bg-primary animate-ping" title="Updating data..." />
+                )}
+              </h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Real-time operational summary, multi-channel performance, revenue velocity, and orders.
+              </p>
+            </div>
+
+            {/* Quick Summary Pill Indicator */}
+            {(startDate || endDate) && (
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-primary/10 border border-primary/20 text-primary text-xs font-bold self-start sm:self-auto">
+                <Calendar size={13} />
+                <span>
+                  Filtered: {startDate || "Start"} → {endDate || "Today"}
+                </span>
+                <button
+                  onClick={handleResetDateFilter}
+                  className="ml-1 hover:text-foreground hover:bg-primary/20 p-1 rounded transition-colors cursor-pointer"
+                  title="Clear Date Filter"
+                >
+                  <RotateCcw size={12} />
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Date Filter Card Toolbar */}
+          <div className="p-3 bg-card border border-border rounded-2xl shadow-xs space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              {/* Preset Buttons */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mr-1 flex items-center gap-1">
+                  <Filter size={12} /> Period:
+                </span>
+                {[
+                  { id: "all", label: "All Time" },
+                  { id: "today", label: "Today" },
+                  { id: "yesterday", label: "Yesterday" },
+                  { id: "week", label: "Last 7 Days" },
+                  { id: "month", label: "This Month" },
+                  { id: "last_month", label: "Last Month" },
+                  { id: "year", label: "This Year" },
+                  { id: "custom", label: "Custom Range" },
+                ].map((preset) => (
+                  <button
+                    key={preset.id}
+                    onClick={() => handlePresetChange(preset.id as DatePreset)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      datePreset === preset.id
+                        ? "bg-primary text-primary-foreground shadow-xs scale-[1.02]"
+                        : "bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground"
+                    }`}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Custom Date Inputs */}
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-1.5 bg-muted/50 border border-border rounded-xl px-2.5 py-1 text-xs">
+                  <span className="text-muted-foreground font-semibold">From:</span>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => {
+                      setDatePreset("custom");
+                      setStartDate(e.target.value);
+                    }}
+                    className="bg-transparent border-0 text-foreground font-semibold text-xs focus:outline-none cursor-pointer"
+                  />
+                </div>
+
+                <div className="flex items-center gap-1.5 bg-muted/50 border border-border rounded-xl px-2.5 py-1 text-xs">
+                  <span className="text-muted-foreground font-semibold">To:</span>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => {
+                      setDatePreset("custom");
+                      setEndDate(e.target.value);
+                    }}
+                    className="bg-transparent border-0 text-foreground font-semibold text-xs focus:outline-none cursor-pointer"
+                  />
+                </div>
+
+                {(startDate || endDate || datePreset !== "all") && (
+                  <button
+                    onClick={handleResetDateFilter}
+                    className="p-1.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer border border-border"
+                    title="Reset to All Time"
+                  >
+                    <RotateCcw size={14} />
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* 4 Cards Grid */}

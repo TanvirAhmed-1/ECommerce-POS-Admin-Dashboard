@@ -52,7 +52,11 @@ export const baseApi = createApi({
     "ServiceType",
     "Card",
     "Payment",
-    "Review"
+    "Review",
+    "Variant",
+    "Accounting",
+    "Company",
   ],
+
   endpoints: () => ({}),
 });

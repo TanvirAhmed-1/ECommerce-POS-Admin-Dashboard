@@ -31,7 +31,55 @@ import {
   Receipt,
   Shield,
   FileCode,
+  Filter,
+  RotateCcw,
+  RefreshCw,
 } from "lucide-react";
+
+type DatePreset = "all" | "today" | "yesterday" | "week" | "month" | "last_month" | "year" | "custom";
+
+const formatDateToInput = (d: Date) => {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const getPresetDates = (preset: DatePreset) => {
+  const now = new Date();
+  switch (preset) {
+    case "today": {
+      const todayStr = formatDateToInput(now);
+      return { start: todayStr, end: todayStr };
+    }
+    case "yesterday": {
+      const y = new Date(now);
+      y.setDate(y.getDate() - 1);
+      const yStr = formatDateToInput(y);
+      return { start: yStr, end: yStr };
+    }
+    case "week": {
+      const w = new Date(now);
+      w.setDate(w.getDate() - 6);
+      return { start: formatDateToInput(w), end: formatDateToInput(now) };
+    }
+    case "month": {
+      const first = new Date(now.getFullYear(), now.getMonth(), 1);
+      return { start: formatDateToInput(first), end: formatDateToInput(now) };
+    }
+    case "last_month": {
+      const first = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const last = new Date(now.getFullYear(), now.getMonth(), 0);
+      return { start: formatDateToInput(first), end: formatDateToInput(last) };
+    }
+    case "year": {
+      const first = new Date(now.getFullYear(), 0, 1);
+      return { start: formatDateToInput(first), end: formatDateToInput(now) };
+    }
+    default:
+      return { start: "", end: "" };
+  }
+};
 
 // Mock payments fallback in case database is empty
 const mockPayments = [
@@ -150,6 +198,38 @@ export default function PaymentsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(20);
 
+  // Date Filtering States
+  const [datePreset, setDatePreset] = useState<DatePreset>("all");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
+  const handlePresetSelect = (preset: DatePreset) => {
+    setDatePreset(preset);
+    if (preset === "all") {
+      setStartDate("");
+      setEndDate("");
+    } else if (preset !== "custom") {
+      const { start, end } = getPresetDates(preset);
+      setStartDate(start);
+      setEndDate(end);
+    }
+    setCurrentPage(1);
+  };
+
+  const handleCustomDateChange = (start: string, end: string) => {
+    setDatePreset("custom");
+    setStartDate(start);
+    setEndDate(end);
+    setCurrentPage(1);
+  };
+
+  const handleClearDateFilter = () => {
+    setDatePreset("all");
+    setStartDate("");
+    setEndDate("");
+    setCurrentPage(1);
+  };
+
   // Debounce search query
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -161,15 +241,17 @@ export default function PaymentsPage() {
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [activeTab, selectedGateway, debouncedSearchQuery]);
+  }, [activeTab, selectedGateway, debouncedSearchQuery, startDate, endDate]);
 
-  // Backend paginated query
-  const { data: paymentsRes, isLoading, refetch } = useGetAllPaymentsQuery({
+  // Backend paginated query with date filters
+  const { data: paymentsRes, isLoading, isFetching, refetch } = useGetAllPaymentsQuery({
     page: currentPage,
     limit: itemsPerPage,
     searchTerm: debouncedSearchQuery,
     status: activeTab === "All" ? "" : activeTab.toUpperCase(),
     gateway: selectedGateway === "All" ? "" : selectedGateway,
+    startDate: startDate || undefined,
+    endDate: endDate || undefined,
   });
 
   const [updatePaymentStatus, { isLoading: isUpdating }] = useUpdatePaymentStatusMutation();
@@ -218,11 +300,18 @@ export default function PaymentsPage() {
         userEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
         userPhone.includes(searchQuery);
 
-      return matchesTab && matchesGateway && matchesSearch;
+      let matchesDate = true;
+      if (startDate || endDate) {
+        const payTime = new Date(pay.createdAt).getTime();
+        if (startDate && payTime < new Date(`${startDate}T00:00:00`).getTime()) matchesDate = false;
+        if (endDate && payTime > new Date(`${endDate}T23:59:59.999`).getTime()) matchesDate = false;
+      }
+
+      return matchesTab && matchesGateway && matchesSearch && matchesDate;
     });
 
     return filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-  }, [payments, isMock, activeTab, selectedGateway, searchQuery, currentPage, itemsPerPage]);
+  }, [payments, isMock, activeTab, selectedGateway, searchQuery, startDate, endDate, currentPage, itemsPerPage]);
 
   // Statistics aggregated
   const stats = useMemo(() => {
@@ -237,15 +326,24 @@ export default function PaymentsPage() {
     }
 
     // Fallback stats calculations from mockPayments
-    const total = mockPayments.length;
-    const success = mockPayments.filter((p) => p.status === "SUCCESS").length;
-    const pending = mockPayments.filter((p) => p.status === "PENDING").length;
-    const revenue = mockPayments
+    const filteredForStats = mockPayments.filter((pay: any) => {
+      if (startDate || endDate) {
+        const payTime = new Date(pay.createdAt).getTime();
+        if (startDate && payTime < new Date(`${startDate}T00:00:00`).getTime()) return false;
+        if (endDate && payTime > new Date(`${endDate}T23:59:59.999`).getTime()) return false;
+      }
+      return true;
+    });
+
+    const total = filteredForStats.length;
+    const success = filteredForStats.filter((p) => p.status === "SUCCESS").length;
+    const pending = filteredForStats.filter((p) => p.status === "PENDING").length;
+    const revenue = filteredForStats
       .filter((p) => p.status === "SUCCESS")
       .reduce((sum, p) => sum + p.amount, 0);
 
     return { total, success, pending, revenue };
-  }, [paymentsRes, isMock]);
+  }, [paymentsRes, isMock, startDate, endDate]);
 
   // Pagination meta data
   const totalPages = useMemo(() => {
@@ -260,11 +358,17 @@ export default function PaymentsPage() {
       const userName = pay.user?.name || "";
       const matchesSearch = pay.transactionId.toLowerCase().includes(searchQuery.toLowerCase()) ||
         userName.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesTab && matchesGateway && matchesSearch;
+      let matchesDate = true;
+      if (startDate || endDate) {
+        const payTime = new Date(pay.createdAt).getTime();
+        if (startDate && payTime < new Date(`${startDate}T00:00:00`).getTime()) matchesDate = false;
+        if (endDate && payTime > new Date(`${endDate}T23:59:59.999`).getTime()) matchesDate = false;
+      }
+      return matchesTab && matchesGateway && matchesSearch && matchesDate;
     }).length;
 
     return Math.max(1, Math.ceil(filteredCount / itemsPerPage));
-  }, [paymentsRes, isMock, activeTab, selectedGateway, searchQuery, itemsPerPage]);
+  }, [paymentsRes, isMock, activeTab, selectedGateway, searchQuery, startDate, endDate, itemsPerPage]);
 
   const totalEntries = useMemo(() => {
     if (!isMock && paymentsRes?.data?.meta?.total !== undefined) {
@@ -278,9 +382,15 @@ export default function PaymentsPage() {
       const userName = pay.user?.name || "";
       const matchesSearch = pay.transactionId.toLowerCase().includes(searchQuery.toLowerCase()) ||
         userName.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesTab && matchesGateway && matchesSearch;
+      let matchesDate = true;
+      if (startDate || endDate) {
+        const payTime = new Date(pay.createdAt).getTime();
+        if (startDate && payTime < new Date(`${startDate}T00:00:00`).getTime()) matchesDate = false;
+        if (endDate && payTime > new Date(`${endDate}T23:59:59.999`).getTime()) matchesDate = false;
+      }
+      return matchesTab && matchesGateway && matchesSearch && matchesDate;
     }).length;
-  }, [paymentsRes, isMock, activeTab, selectedGateway, searchQuery]);
+  }, [paymentsRes, isMock, activeTab, selectedGateway, searchQuery, startDate, endDate]);
 
   // Page Numbers Array
   const pageNumbers = useMemo(() => {
@@ -510,6 +620,102 @@ export default function PaymentsPage() {
           </div>
         </div>
 
+        {/* Date Filter & Control Bar */}
+        <div className="glass-card p-3.5 sm:p-4 rounded-2xl border border-border bg-card shadow-xs space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2 border-b border-border/50">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <Calendar size={14} />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-foreground">Date Range Filter</span>
+                {isFetching && (
+                  <RefreshCw size={12} className="animate-spin text-primary" />
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              {(startDate || endDate || datePreset !== "all") && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] font-semibold text-primary bg-primary/10 px-2.5 py-1 rounded-md border border-primary/20 flex items-center gap-1">
+                    <Filter size={11} />
+                    <span>
+                      {startDate && endDate
+                        ? `${startDate} ~ ${endDate}`
+                        : startDate
+                        ? `From ${startDate}`
+                        : `Until ${endDate}`}
+                    </span>
+                    <span className="opacity-75 font-normal">({totalEntries} records)</span>
+                  </span>
+                  <button
+                    onClick={handleClearDateFilter}
+                    className="text-[11px] font-bold text-rose-500 hover:text-rose-600 dark:hover:text-rose-400 bg-rose-500/10 hover:bg-rose-500/15 px-2.5 py-1 rounded-md transition-all flex items-center gap-1 cursor-pointer"
+                    title="Reset date filter"
+                  >
+                    <RotateCcw size={11} />
+                    <span>Clear</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+            {/* Quick Presets */}
+            <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-1 md:pb-0 max-w-full">
+              {[
+                { id: "all", label: "All Time" },
+                { id: "today", label: "Today" },
+                { id: "yesterday", label: "Yesterday" },
+                { id: "week", label: "Last 7 Days" },
+                { id: "month", label: "This Month" },
+                { id: "last_month", label: "Last Month" },
+                { id: "year", label: "This Year" },
+                { id: "custom", label: "Custom Range" },
+              ].map((preset) => (
+                <button
+                  key={preset.id}
+                  onClick={() => handlePresetSelect(preset.id as DatePreset)}
+                  className={`px-3 py-1.5 text-[11px] font-bold rounded-lg transition-all whitespace-nowrap cursor-pointer ${
+                    datePreset === preset.id
+                      ? "bg-primary text-primary-foreground shadow-sm scale-[1.02]"
+                      : "bg-muted/70 hover:bg-muted text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Custom Range Inputs */}
+            {(datePreset === "custom" || startDate || endDate) && (
+              <div className="flex items-center gap-2 shrink-0 animate-fade-in self-start md:self-auto">
+                <div className="flex items-center gap-1 bg-muted/60 px-2.5 py-1.5 rounded-lg border border-border">
+                  <span className="text-[10px] uppercase font-bold text-muted-foreground">From</span>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => handleCustomDateChange(e.target.value, endDate)}
+                    className="bg-transparent text-xs font-semibold text-foreground outline-none cursor-pointer"
+                  />
+                </div>
+                <span className="text-xs text-muted-foreground font-bold">~</span>
+                <div className="flex items-center gap-1 bg-muted/60 px-2.5 py-1.5 rounded-lg border border-border">
+                  <span className="text-[10px] uppercase font-bold text-muted-foreground">To</span>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => handleCustomDateChange(startDate, e.target.value)}
+                    className="bg-transparent text-xs font-semibold text-foreground outline-none cursor-pointer"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Tab Selection, Gateway Filter & Search bar */}
         <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-3">
@@ -633,7 +839,51 @@ export default function PaymentsPage() {
                         <td className="p-4">{getGatewayBadge(pay.paymentGateway)}</td>
 
                         {/* Date Created */}
-                        <td className="p-4 text-muted-foreground font-medium">{formattedDate}</td>
+                        <td className="p-4 whitespace-nowrap">
+                          <div className="flex flex-col">
+                            <div className="flex items-center gap-1.5 font-semibold text-foreground text-xs">
+                              <span>
+                                {pay.createdAt
+                                  ? new Date(pay.createdAt).toLocaleDateString("en-US", {
+                                      month: "short",
+                                      day: "numeric",
+                                      year: "numeric",
+                                    })
+                                  : "N/A"}
+                              </span>
+                              {(() => {
+                                if (!pay.createdAt) return null;
+                                const d = new Date(pay.createdAt);
+                                const today = new Date();
+                                if (d.toDateString() === today.toDateString()) {
+                                  return (
+                                    <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-primary/15 text-primary border border-primary/20">
+                                      Today
+                                    </span>
+                                  );
+                                }
+                                const yesterday = new Date(today);
+                                yesterday.setDate(yesterday.getDate() - 1);
+                                if (d.toDateString() === yesterday.toDateString()) {
+                                  return (
+                                    <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                                      Yesterday
+                                    </span>
+                                  );
+                                }
+                                return null;
+                              })()}
+                            </div>
+                            <span className="text-[10px] text-muted-foreground font-mono">
+                              {pay.createdAt
+                                ? new Date(pay.createdAt).toLocaleTimeString("en-US", {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })
+                                : ""}
+                            </span>
+                          </div>
+                        </td>
 
                         {/* Amount */}
                         <td className="p-4 text-right font-black text-foreground">

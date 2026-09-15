@@ -45,9 +45,13 @@ export default function RootLayout({
         h-full antialiased dark
       `}
     >
-      <body className="min-h-full flex flex-col bg-background text-foreground">
+      <body
+        suppressHydrationWarning
+        className="min-h-full flex flex-col bg-background text-foreground"
+      >
         <ReduxProvider>{children}</ReduxProvider>
       </body>
+
     </html>
   );
 }

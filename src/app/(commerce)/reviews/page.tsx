@@ -338,7 +338,7 @@ export default function ReviewsPage() {
         {/* Reviews Shadcn Table layout */}
         {isLoading ? (
           <div className="h-[400px] flex items-center justify-center">
-            <Spinner size="lg" className="text-primary" />
+            <Spinner className="w-8 h-8 text-primary" />
           </div>
         ) : filteredReviews.length === 0 ? (
           <div className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-850 rounded-2xl p-12 text-center flex flex-col items-center justify-center space-y-3 shadow-sm">
@@ -745,7 +745,7 @@ export default function ReviewsPage() {
                   disabled={isDeleting}
                   className="px-4 py-2 bg-red-550 hover:bg-red-650 dark:bg-red-500 dark:hover:bg-red-650 text-white rounded-xl text-xs font-semibold cursor-pointer transition-all active:scale-97 flex items-center gap-1.5"
                 >
-                  {isDeleting ? <Spinner size="sm" className="text-white" /> : null}
+                  {isDeleting ? <Spinner className="w-3.5 h-3.5 text-white" /> : null}
                   Confirm Delete
                 </button>
               </div>

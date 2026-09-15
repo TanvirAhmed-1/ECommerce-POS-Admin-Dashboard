@@ -26,7 +26,15 @@ export const orderApi = baseApi.injectEndpoints({
         method: "POST",
         body: data,
       }),
-      invalidatesTags: ["Transaction"],
+      invalidatesTags: ["Transaction", "Product", "Variant", "Payment"],
+    }),
+    createAdminOrder: builder.mutation({
+      query: (data) => ({
+        url: "/create-admin-order",
+        method: "POST",
+        body: data,
+      }),
+      invalidatesTags: ["Transaction", "Product", "Variant", "Payment"],
     }),
     updateOrderStatus: builder.mutation({
       query: ({ id, status, paymentStatus }) => ({
@@ -34,14 +42,14 @@ export const orderApi = baseApi.injectEndpoints({
         method: "PATCH",
         body: { status, paymentStatus },
       }),
-      invalidatesTags: ["Transaction"],
+      invalidatesTags: ["Transaction", "Product", "Variant", "Payment"],
     }),
     deleteOrder: builder.mutation({
       query: (id) => ({
         url: `/delete-order/${id}`,
         method: "DELETE",
       }),
-      invalidatesTags: ["Transaction"],
+      invalidatesTags: ["Transaction", "Product", "Variant", "Payment"],
     }),
   }),
 });
@@ -51,6 +59,8 @@ export const {
   useGetMyOrdersQuery,
   useGetSingleOrderQuery,
   useCheckoutOrderMutation,
+  useCreateAdminOrderMutation,
   useUpdateOrderStatusMutation,
   useDeleteOrderMutation,
 } = orderApi;
+

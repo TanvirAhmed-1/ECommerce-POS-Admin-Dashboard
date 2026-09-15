@@ -8,182 +8,421 @@ import {
   useUpdateSectionMutation,
   useDeleteSectionMutation,
 } from "@/redux/features/section/sectionApi";
-import { useGetAllProductsQuery } from "@/redux/features/product/productApi";
 import Loader from "@/components/shared/Loader";
-import toast, { Toaster } from "react-hot-toast";
+import { toast, Toaster } from "react-hot-toast";
 import {
   Plus,
-  Edit2,
-  Trash2,
-  Sliders,
   Search,
-  Check,
-  X,
   Layers,
+  RefreshCw,
+  Eye,
+  SlidersHorizontal,
+  Sparkles,
   ArrowUpDown,
   ShoppingBag,
-  Info,
-  ChevronRight,
-  Eye,
   Package,
 } from "lucide-react";
+import VisualSectionShelf from "@/components/ui/cms/sections/VisualSectionShelf";
+import AddProductPickerModal from "@/components/ui/cms/sections/AddProductPickerModal";
+import EditSectionModal from "@/components/ui/cms/sections/EditSectionModal";
+import StorefrontPreviewModal from "@/components/ui/cms/sections/StorefrontPreviewModal";
+
+const fallbackSections = [
+  {
+    _id: "mock-sec-1",
+    title: "🔥 Flash Sale Deals",
+    slug: "flash-sale",
+    description: "Limited time offers with verified discounts up to 50% off",
+    displayOrder: 1,
+    isActive: true,
+    products: [
+      {
+        _id: "mock-p1",
+        name: "Wireless Noise Cancelling Headphones",
+        thumbnail:
+          "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?q=80&w=300",
+        salePrice: 199,
+        basePrice: 299,
+      },
+      {
+        _id: "mock-p2",
+        name: "Pro Performance Running Shoes",
+        thumbnail:
+          "https://images.unsplash.com/photo-1542291026-7eec264c27ff?q=80&w=300",
+        salePrice: 129,
+        basePrice: 160,
+      },
+      {
+        _id: "mock-p3",
+        name: "Minimalist Smart Watch Series 8",
+        thumbnail:
+          "https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=300",
+        salePrice: 249,
+        basePrice: 320,
+      },
+    ],
+  },
+  {
+    _id: "mock-sec-2",
+    title: "⭐ Recommended For You",
+    slug: "recommended",
+    description: "Trending customer favorites and best-reviewed lifestyle products",
+    displayOrder: 2,
+    isActive: true,
+    products: [
+      {
+        _id: "mock-p4",
+        name: "Vintage Polarized Sunglasses",
+        thumbnail:
+          "https://images.unsplash.com/photo-1572635196237-14b3f281503f?q=80&w=300",
+        salePrice: 79,
+        basePrice: 99,
+      },
+      {
+        _id: "mock-p5",
+        name: "Premium Leather Everyday Bag",
+        thumbnail:
+          "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?q=80&w=300",
+        salePrice: 159,
+        basePrice: 199,
+      },
+    ],
+  },
+];
 
 export default function CMSectionsPage() {
-  // Fetch all home sections for admin (passing admin: true to get inactive ones as well)
-  const { data: sectionsRes, isLoading, refetch } = useGetHomeSectionsQuery({ admin: "true" });
+  // Fetch home sections for admin
+  const {
+    data: sectionsRes,
+    isLoading,
+    refetch,
+    isFetching,
+  } = useGetHomeSectionsQuery({ admin: "true" });
+
   const [createSection, { isLoading: isCreating }] = useCreateSectionMutation();
   const [updateSection, { isLoading: isUpdating }] = useUpdateSectionMutation();
   const [deleteSection, { isLoading: isDeleting }] = useDeleteSectionMutation();
 
-  const sections = useMemo(() => sectionsRes?.data || [], [sectionsRes]);
+  const isSaving = isCreating || isUpdating || isDeleting;
 
-  // Mode: "list" | "editor"
-  const [viewMode, setViewMode] = useState<"list" | "editor">("list");
+  const [localSections, setLocalSections] = useState<any[]>([]);
 
-  // Editor states
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [title, setTitle] = useState("");
-  const [slug, setSlug] = useState("");
-  const [description, setDescription] = useState("");
-  const [displayOrder, setDisplayOrder] = useState<number>(0);
-  const [isActive, setIsActive] = useState(true);
-  const [assignedProducts, setAssignedProducts] = useState<any[]>([]);
-
-  // Search queries
-  const [sectionSearch, setSectionSearch] = useState("");
-  const [productSearch, setProductSearch] = useState("");
-  const [debouncedProductSearch, setDebouncedProductSearch] = useState("");
-
-  // Debounce product search to optimize backend queries
+  // Load localStorage fallback if any
   useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedProductSearch(productSearch);
-    }, 300);
-    return () => clearTimeout(handler);
-  }, [productSearch]);
-
-  // Query products based on debounced search
-  const { data: productsRes, isLoading: isProductsLoading } = useGetAllProductsQuery(
-    {
-      searchTerm: debouncedProductSearch,
-      limit: 10,
-    },
-    { skip: viewMode !== "editor" }
-  );
-
-  const availableProducts = useMemo(() => {
-    // Backend products format wrapper check
-    const list = productsRes?.data?.data || productsRes?.data || [];
-    return Array.isArray(list) ? list : [];
-  }, [productsRes]);
-
-  // Generate slug dynamically from Title
-  useEffect(() => {
-    if (!editingId) {
-      const generated = title
-        .toLowerCase()
-        .replace(/[^a-z0-9 -]/g, "")
-        .replace(/\s+/g, "-")
-        .replace(/-+/g, "-");
-      setSlug(generated);
-    }
-  }, [title, editingId]);
-
-  // Reset editor state
-  const handleOpenCreate = () => {
-    setEditingId(null);
-    setTitle("");
-    setSlug("");
-    setDescription("");
-    setDisplayOrder(sections.length + 1);
-    setIsActive(true);
-    setAssignedProducts([]);
-    setViewMode("editor");
-  };
-
-  // Edit section loader
-  const handleOpenEdit = (section: any) => {
-    setEditingId(section._id);
-    setTitle(section.title);
-    setSlug(section.slug);
-    setDescription(section.description || "");
-    setDisplayOrder(section.displayOrder || 0);
-    setIsActive(section.isActive);
-    
-    // Safely assign populated products
-    const products = section.products || [];
-    setAssignedProducts(products);
-    setViewMode("editor");
-  };
-
-  // Assign product to list
-  const handleAddProduct = (prod: any) => {
-    if (assignedProducts.some((p) => p._id === prod._id)) {
-      toast.error("Product is already assigned to this section!");
-      return;
-    }
-    setAssignedProducts((prev) => [...prev, prod]);
-  };
-
-  // Remove product from list
-  const handleRemoveProduct = (prodId: string) => {
-    setAssignedProducts((prev) => prev.filter((p) => p._id !== prodId));
-  };
-
-  // Save changes
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title.trim()) {
-      toast.error("Please enter a section title.");
-      return;
-    }
-
-    const payload = {
-      title,
-      slug,
-      description,
-      displayOrder: Number(displayOrder),
-      isActive,
-      products: assignedProducts.map((p) => p._id),
-    };
-
-    const loadingToast = toast.loading(editingId ? "Updating section..." : "Creating section...");
-    try {
-      if (editingId) {
-        await updateSection({ id: editingId, data: payload }).unwrap();
-        toast.success("Homepage Section updated successfully!", { id: loadingToast });
-      } else {
-        await createSection(payload).unwrap();
-        toast.success("Homepage Section created successfully!", { id: loadingToast });
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("zenith_cms_sections");
+      if (saved) {
+        try {
+          setLocalSections(JSON.parse(saved));
+        } catch (e) {
+          console.error(e);
+        }
       }
-      refetch();
-      setViewMode("list");
-    } catch (err: any) {
-      toast.error(err?.data?.message || err?.message || "Failed to save section.", { id: loadingToast });
     }
-  };
+  }, []);
 
-  // Delete section
-  const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Are you sure you want to permanently delete the "${name}" section?`)) return;
-
-    const loadingToast = toast.loading("Deleting section...");
-    try {
-      await deleteSection(id).unwrap();
-      toast.success("Section deleted successfully!", { id: loadingToast });
-      refetch();
-    } catch (err: any) {
-      toast.error(err?.data?.message || "Failed to delete section.", { id: loadingToast });
+  const sections = useMemo(() => {
+    if (sectionsRes?.data && Array.isArray(sectionsRes.data) && sectionsRes.data.length > 0) {
+      return [...sectionsRes.data].sort(
+        (a: any, b: any) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0)
+      );
     }
-  };
+    if (localSections.length > 0) {
+      return [...localSections].sort(
+        (a: any, b: any) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0)
+      );
+    }
+    return fallbackSections;
+  }, [sectionsRes, localSections]);
 
-  // Filtered sections to search in list view
+  // Search & Filters
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
+
+  // Modals state
+  const [addProductsModalOpen, setAddProductsModalOpen] = useState(false);
+  const [targetSectionForProducts, setTargetSectionForProducts] = useState<any | null>(null);
+
+  const [editSectionModalOpen, setEditSectionModalOpen] = useState(false);
+  const [targetSectionForEdit, setTargetSectionForEdit] = useState<any | null>(null);
+
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
+  const [previewSection, setPreviewSection] = useState<any | null>(null);
+
+  // Filtered Sections
   const filteredSections = useMemo(() => {
-    return sections.filter((sec: any) =>
-      sec.title?.toLowerCase().includes(sectionSearch.toLowerCase()) ||
-      sec.slug?.toLowerCase().includes(sectionSearch.toLowerCase())
+    return sections.filter((s: any) => {
+      const q = searchQuery.toLowerCase().trim();
+      const matchesSearch =
+        !q ||
+        s.title?.toLowerCase().includes(q) ||
+        s.slug?.toLowerCase().includes(q) ||
+        s.description?.toLowerCase().includes(q) ||
+        s.products?.some((p: any) => p.name?.toLowerCase().includes(q));
+
+      let matchesStatus = true;
+      if (statusFilter === "active") matchesStatus = s.isActive === true;
+      if (statusFilter === "inactive") matchesStatus = s.isActive === false;
+
+      return matchesSearch && matchesStatus;
+    });
+  }, [sections, searchQuery, statusFilter]);
+
+  // Stats
+  const activeCount = useMemo(() => {
+    return sections.filter((s) => s.isActive).length;
+  }, [sections]);
+
+  const totalAssignedProducts = useMemo(() => {
+    return sections.reduce((sum, s) => sum + (s.products?.length || 0), 0);
+  }, [sections]);
+
+  // Actions
+  const handleOpenCreateSection = () => {
+    setTargetSectionForEdit(null);
+    setEditSectionModalOpen(true);
+  };
+
+  const handleOpenEditSection = (sec: any) => {
+    setTargetSectionForEdit(sec);
+    setEditSectionModalOpen(true);
+  };
+
+  const handleOpenAddProducts = (sec: any) => {
+    setTargetSectionForProducts(sec);
+    setAddProductsModalOpen(true);
+  };
+
+  const handleOpenPreview = (sec: any) => {
+    setPreviewSection(sec);
+    setPreviewModalOpen(true);
+  };
+
+  // Save Section Settings (Create / Update)
+  const handleSaveSectionSettings = async (payload: any) => {
+    const toastId = toast.loading(
+      targetSectionForEdit ? "Updating section..." : "Creating section..."
     );
-  }, [sections, sectionSearch]);
+
+    const isMongoId = targetSectionForEdit
+      ? /^[0-9a-fA-F]{24}$/.test(targetSectionForEdit._id)
+      : false;
+
+    try {
+      if (targetSectionForEdit?._id && isMongoId) {
+        await updateSection({ id: targetSectionForEdit._id, data: payload }).unwrap();
+        toast.success("Section updated successfully!", { id: toastId });
+        refetch();
+      } else if (!targetSectionForEdit && sectionsRes?.data) {
+        await createSection(payload).unwrap();
+        toast.success("Section created successfully!", { id: toastId });
+        refetch();
+      } else {
+        // Local fallback
+        let updated: any[] = [];
+        if (targetSectionForEdit) {
+          updated = sections.map((s) =>
+            s._id === targetSectionForEdit._id ? { ...s, ...payload } : s
+          );
+        } else {
+          const newSec = {
+            _id: `sec-${Date.now()}`,
+            ...payload,
+          };
+          updated = [...sections, newSec];
+        }
+        setLocalSections(updated);
+        localStorage.setItem("zenith_cms_sections", JSON.stringify(updated));
+        toast.success("Section saved locally!", { id: toastId });
+      }
+
+      setEditSectionModalOpen(false);
+      setTargetSectionForEdit(null);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err?.data?.message || err?.message || "Failed to save section.", {
+        id: toastId,
+      });
+    }
+  };
+
+  // Save Product Selection from Picker Modal
+  const handleConfirmAddProducts = async (sec: any, productIds: string[]) => {
+    const toastId = toast.loading(`Updating products in "${sec.title}"...`);
+    const isMongoId = /^[0-9a-fA-F]{24}$/.test(sec._id);
+
+    try {
+      if (isMongoId) {
+        await updateSection({
+          id: sec._id,
+          data: {
+            ...sec,
+            products: productIds,
+          },
+        }).unwrap();
+        toast.success(`Updated products in "${sec.title}"!`, { id: toastId });
+        refetch();
+      } else {
+        const updated = sections.map((s) => {
+          if (s._id === sec._id) {
+            return {
+              ...s,
+              products: productIds.map((id) => {
+                // If it's an object in previous state, preserve it, or pass id
+                const existing = s.products?.find((p: any) => (p._id || p) === id);
+                return existing || { _id: id, name: "Selected Product", salePrice: 99 };
+              }),
+            };
+          }
+          return s;
+        });
+        setLocalSections(updated);
+        localStorage.setItem("zenith_cms_sections", JSON.stringify(updated));
+        toast.success("Products updated!", { id: toastId });
+      }
+
+      setAddProductsModalOpen(false);
+      setTargetSectionForProducts(null);
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Failed to assign products.", { id: toastId });
+    }
+  };
+
+  // Quick Remove single product from shelf
+  const handleRemoveProductFromShelf = async (sec: any, prodId: string) => {
+    const currentProducts = sec.products || [];
+    const remainingIds = currentProducts
+      .filter((p: any) => (p._id || p) !== prodId)
+      .map((p: any) => p._id || p);
+
+    await handleConfirmAddProducts(sec, remainingIds);
+  };
+
+  // Reorder single product inside shelf (Left / Right)
+  const handleReorderProductInShelf = async (
+    sec: any,
+    prodIndex: number,
+    direction: "left" | "right"
+  ) => {
+    const targetIdx = direction === "left" ? prodIndex - 1 : prodIndex + 1;
+    const currentProducts = [...(sec.products || [])];
+    if (targetIdx < 0 || targetIdx >= currentProducts.length) return;
+
+    const temp = currentProducts[prodIndex];
+    currentProducts[prodIndex] = currentProducts[targetIdx];
+    currentProducts[targetIdx] = temp;
+
+    const updatedIds = currentProducts.map((p: any) => p._id || p);
+    await handleConfirmAddProducts(sec, updatedIds);
+  };
+
+  // Toggle Active / Draft Status
+  const handleToggleStatus = async (sec: any) => {
+    const newStatus = !sec.isActive;
+    const toastId = toast.loading(
+      newStatus ? `Publishing "${sec.title}"...` : `Setting "${sec.title}" to Draft...`
+    );
+    const isMongoId = /^[0-9a-fA-F]{24}$/.test(sec._id);
+
+    try {
+      if (isMongoId) {
+        await updateSection({
+          id: sec._id,
+          data: { isActive: newStatus },
+        }).unwrap();
+        toast.success(
+          newStatus ? `"${sec.title}" is now LIVE on homepage!` : `"${sec.title}" hidden.`,
+          { id: toastId }
+        );
+        refetch();
+      } else {
+        const updated = sections.map((s) =>
+          s._id === sec._id ? { ...s, isActive: newStatus } : s
+        );
+        setLocalSections(updated);
+        localStorage.setItem("zenith_cms_sections", JSON.stringify(updated));
+        toast.success(newStatus ? "Section Published!" : "Section Set to Draft!", {
+          id: toastId,
+        });
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Failed to update status.", { id: toastId });
+    }
+  };
+
+  // Move Section Order (Up / Down)
+  const handleMoveSectionOrder = async (sec: any, direction: "up" | "down") => {
+    const currentIndex = sections.findIndex((s) => s._id === sec._id);
+    if (currentIndex === -1) return;
+
+    const targetIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= sections.length) return;
+
+    const targetSec = sections[targetIndex];
+    const currentOrder = sec.displayOrder ?? currentIndex + 1;
+    const targetOrder = targetSec.displayOrder ?? targetIndex + 1;
+
+    const toastId = toast.loading("Reordering homepage sections...");
+    const isMongoId =
+      /^[0-9a-fA-F]{24}$/.test(sec._id) && /^[0-9a-fA-F]{24}$/.test(targetSec._id);
+
+    try {
+      if (isMongoId) {
+        await Promise.all([
+          updateSection({
+            id: sec._id,
+            data: { displayOrder: targetOrder },
+          }).unwrap(),
+          updateSection({
+            id: targetSec._id,
+            data: { displayOrder: currentOrder },
+          }).unwrap(),
+        ]);
+        toast.success("Section sequence updated!", { id: toastId });
+        refetch();
+      } else {
+        const updated = sections.map((s) => {
+          if (s._id === sec._id) return { ...s, displayOrder: targetOrder };
+          if (s._id === targetSec._id) return { ...s, displayOrder: currentOrder };
+          return s;
+        });
+        setLocalSections(updated);
+        localStorage.setItem("zenith_cms_sections", JSON.stringify(updated));
+        toast.success("Section sequence updated locally!", { id: toastId });
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Failed to reorder sections.", { id: toastId });
+    }
+  };
+
+  // Delete Section
+  const handleDeleteSection = async (id: string, title: string) => {
+    if (!confirm(`Are you sure you want to delete the "${title}" section?`)) {
+      return;
+    }
+
+    const toastId = toast.loading("Deleting section...");
+    const isMongoId = /^[0-9a-fA-F]{24}$/.test(id);
+
+    try {
+      if (isMongoId) {
+        await deleteSection(id).unwrap();
+        toast.success("Section deleted successfully!", { id: toastId });
+        refetch();
+      } else {
+        const updated = sections.filter((s) => s._id !== id);
+        setLocalSections(updated);
+        localStorage.setItem("zenith_cms_sections", JSON.stringify(updated));
+        toast.success("Section removed locally!", { id: toastId });
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err?.data?.message || "Failed to delete section.", { id: toastId });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -198,425 +437,176 @@ export default function CMSectionsPage() {
   return (
     <DashboardLayout>
       <Toaster position="top-right" reverseOrder={false} />
-      <div className="space-y-6 animate-fade-in max-w-[1600px] mx-auto p-1 md:p-6 text-foreground">
-        
-        {/* Header Section */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+      <div className="space-y-4 animate-fade-in max-w-[1600px] mx-auto p-1 md:p-5 text-foreground pb-12">
+        {/* 1. TOP HEADER */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
               <span>Web CMS</span>
               <span className="opacity-50">/</span>
               <span className="text-foreground">Homepage Sections</span>
             </div>
-            <h2 className="text-2xl font-black font-heading tracking-tight flex items-center gap-2">
-              <Layers className="text-primary" size={24} />
-              Homepage Collections & Deals
-            </h2>
-            <p className="text-xs text-muted-foreground max-w-xl">
-              Dynamically control homepage carousels and lists like "Best Deals", "Recommended", and campaigns. Set display ordering and assign products.
+            <div className="flex items-center gap-2.5">
+              <h1 className="text-xl sm:text-2xl font-black font-heading tracking-tight text-foreground flex items-center gap-2">
+                <Layers className="text-primary" size={24} />
+                Homepage Showcase Shelves
+              </h1>
+              <span className="text-[11px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.2 rounded-full border border-emerald-500/20">
+                {activeCount} Live
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground max-w-2xl">
+              Easily manage, reorder, and populate products across your homepage collections and promotional rows.
             </p>
           </div>
 
-          {viewMode === "list" && (
+          <div className="flex items-center gap-2">
             <button
-              onClick={handleOpenCreate}
-              className="h-10 px-4 rounded-lg bg-primary hover:bg-primary/90 text-white flex items-center justify-center gap-1.5 text-xs font-bold transition-all shadow-md hover:shadow-primary/20 shrink-0 cursor-pointer"
+              onClick={() => {
+                refetch();
+                toast.success("Storefront sections synced!");
+              }}
+              disabled={isFetching}
+              className="h-8.5 px-3 rounded-xl border border-border bg-card text-muted-foreground hover:text-foreground hover:bg-muted text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all"
+              title="Refresh"
+            >
+              <RefreshCw size={13} className={isFetching ? "animate-spin" : ""} />
+              <span className="hidden sm:inline">Sync</span>
+            </button>
+
+            <button
+              onClick={handleOpenCreateSection}
+              className="h-8.5 px-4 rounded-xl bg-primary hover:opacity-90 text-white flex items-center justify-center gap-1.5 text-xs font-bold transition-all shadow-md shadow-primary/20 shrink-0 cursor-pointer"
             >
               <Plus size={15} />
-              Create Custom Section
+              <span>+ Add New Section</span>
             </button>
+          </div>
+        </div>
+
+        {/* 2. TOOLBAR & SEARCH (COMPACT) */}
+        <div className="glass-card p-2.5 rounded-xl border border-border flex flex-col md:flex-row md:items-center justify-between gap-3">
+          {/* Status Filter Tabs */}
+          <div className="flex bg-muted/80 p-0.5 rounded-lg border border-border self-start">
+            {[
+              { key: "all", label: `All (${sections.length})` },
+              { key: "active", label: `Published (${activeCount})` },
+              { key: "inactive", label: `Drafts (${sections.length - activeCount})` },
+            ].map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setStatusFilter(tab.key as any)}
+                className={`px-3 py-1 text-xs font-bold rounded-md cursor-pointer transition-all ${
+                  statusFilter === tab.key
+                    ? "bg-white text-black dark:bg-zinc-800 dark:text-white shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Search Input */}
+          <div className="flex items-center h-8.5 w-full md:max-w-md rounded-lg px-2.5 gap-2 border border-border bg-card transition-all focus-within:border-primary">
+            <Search className="text-muted-foreground shrink-0" size={14} />
+            <input
+              type="text"
+              placeholder="Search collections or product names..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="flex-1 outline-none text-xs bg-transparent border-none font-medium text-foreground placeholder:text-muted-foreground"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="text-xs text-muted-foreground hover:text-foreground font-bold px-1"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* 3. VISUAL PRODUCT SHELVES (COMPACT STACK) */}
+        <div className="space-y-3">
+          {filteredSections.length > 0 ? (
+            filteredSections.map((sec: any, idx: number) => (
+              <VisualSectionShelf
+                key={sec._id || idx}
+                section={sec}
+                index={idx}
+                totalSections={filteredSections.length}
+                onOpenAddProducts={handleOpenAddProducts}
+                onEditSection={handleOpenEditSection}
+                onDeleteSection={handleDeleteSection}
+                onToggleStatus={handleToggleStatus}
+                onMoveSectionOrder={handleMoveSectionOrder}
+                onRemoveProductFromSection={handleRemoveProductFromShelf}
+                onReorderProductInShelf={handleReorderProductInShelf}
+                onOpenPreview={handleOpenPreview}
+                isUpdating={isSaving}
+              />
+            ))
+          ) : (
+            <div className="glass-card p-12 text-center border border-dashed border-border rounded-3xl bg-card space-y-4">
+              <Layers className="mx-auto text-muted-foreground/30" size={48} />
+              <div className="space-y-1">
+                <h3 className="text-base font-bold text-foreground">
+                  No Homepage Sections Match
+                </h3>
+                <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                  {searchQuery
+                    ? "Try searching for a different keyword or switch filter tabs."
+                    : "Create your first homepage showcase section to feature deals, popular products, and new arrivals."}
+                </p>
+              </div>
+              <button
+                onClick={handleOpenCreateSection}
+                className="px-5 py-2.5 bg-primary text-white text-xs font-bold rounded-xl hover:opacity-90 transition-all inline-flex items-center gap-1.5 shadow-sm cursor-pointer"
+              >
+                <Plus size={15} />
+                <span>Create First Section</span>
+              </button>
+            </div>
           )}
         </div>
 
-        {viewMode === "list" ? (
-          /* LIST WORKSPACE */
-          <div className="space-y-4">
-            
-            {/* Search toolbar */}
-            <div className="flex items-center h-10 w-full max-w-md rounded-lg px-3 gap-2 border border-border bg-card transition-all focus-within:border-zinc-400 dark:focus-within:border-zinc-700">
-              <Search className="text-muted-foreground" size={16} />
-              <input
-                type="text"
-                placeholder="Search collection titles or slugs..."
-                value={sectionSearch}
-                onChange={(e) => setSectionSearch(e.target.value)}
-                className="flex-1 outline-none text-xs bg-transparent border-none font-medium placeholder:text-muted-foreground text-foreground"
-              />
-            </div>
+        {/* 4. MODALS */}
+        {/* Visual Catalog Product Picker */}
+        <AddProductPickerModal
+          isOpen={addProductsModalOpen}
+          onClose={() => {
+            setAddProductsModalOpen(false);
+            setTargetSectionForProducts(null);
+          }}
+          section={targetSectionForProducts}
+          onConfirmAdd={handleConfirmAddProducts}
+          isSaving={isSaving}
+        />
 
-            {/* Grid display */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {filteredSections.length > 0 ? (
-                filteredSections.map((sec: any) => {
-                  const productCount = sec.products?.length || 0;
-                  return (
-                    <div
-                      key={sec._id}
-                      className="glass-card p-5 rounded-2xl border border-border bg-card flex flex-col justify-between hover:shadow-md transition-all group"
-                    >
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-start">
-                          <div className="space-y-0.5">
-                            <h4 className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">
-                              {sec.title}
-                            </h4>
-                            <p className="text-[10px] text-muted-foreground font-mono">
-                              Slug: {sec.slug}
-                            </p>
-                          </div>
-                          
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-mono bg-muted px-2 py-0.5 rounded text-muted-foreground font-bold">
-                              Order: {sec.displayOrder || 0}
-                            </span>
-                            <span
-                              className={`inline-flex items-center px-2 py-0.5 rounded text-[9px] font-extrabold border ${
-                                sec.isActive
-                                  ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/10"
-                                  : "bg-zinc-500/10 text-muted-foreground border-border"
-                              }`}
-                            >
-                              {sec.isActive ? "ACTIVE" : "INACTIVE"}
-                            </span>
-                          </div>
-                        </div>
+        {/* Edit Section Title/Slug Settings */}
+        <EditSectionModal
+          isOpen={editSectionModalOpen}
+          onClose={() => {
+            setEditSectionModalOpen(false);
+            setTargetSectionForEdit(null);
+          }}
+          section={targetSectionForEdit}
+          onSave={handleSaveSectionSettings}
+          isSaving={isSaving}
+          totalSectionsCount={sections.length}
+        />
 
-                        {sec.description && (
-                          <p className="text-xs text-muted-foreground line-clamp-2">
-                            {sec.description}
-                          </p>
-                        )}
-
-                        {/* Populated Product Cards preview */}
-                        <div className="pt-2">
-                          <label className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest block mb-2">
-                            Assigned Products ({productCount})
-                          </label>
-                          
-                          {productCount > 0 ? (
-                            <div className="flex flex-wrap gap-2">
-                              {sec.products.slice(0, 4).map((p: any) => (
-                                <div
-                                  key={p._id}
-                                  className="flex items-center gap-1.5 bg-muted/30 border border-border/50 rounded-lg p-1.5 text-[10px] font-medium max-w-[180px]"
-                                >
-                                  <img
-                                    src={p.thumbnail || "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?q=80&w=60"}
-                                    alt={p.name}
-                                    className="w-5 h-5 rounded object-cover shrink-0"
-                                  />
-                                  <span className="truncate text-foreground font-semibold">{p.name}</span>
-                                </div>
-                              ))}
-                              {productCount > 4 && (
-                                <div className="bg-primary/5 border border-primary/10 rounded-lg px-2 py-1.5 text-[9px] font-bold text-primary flex items-center justify-center">
-                                  + {productCount - 4} more
-                                </div>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-[10px] text-muted-foreground italic flex items-center gap-1">
-                              <Info size={12} />
-                              No products assigned yet. Edit this section to assign products.
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Footer Actions */}
-                      <div className="flex justify-end gap-2 border-t border-border/40 pt-4 mt-5">
-                        <button
-                          type="button"
-                          onClick={() => handleOpenEdit(sec)}
-                          className="h-8 px-3 rounded-lg border border-border bg-card text-foreground hover:bg-muted text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
-                        >
-                          <Edit2 size={12} />
-                          <span>Edit Details</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(sec._id, sec.title)}
-                          className="h-8 px-3 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive hover:text-white border border-destructive/10 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
-                        >
-                          <Trash2 size={12} />
-                          <span>Delete</span>
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="lg:col-span-2 p-12 text-center text-muted-foreground space-y-2 border border-border border-dashed rounded-2xl bg-card">
-                  <Sliders className="mx-auto text-muted/30" size={36} />
-                  <p className="text-xs font-bold">No Collections Found</p>
-                  <p className="text-[10px]">Create homepage collection lists to display campaigns and categorized deals.</p>
-                </div>
-              )}
-            </div>
-
-          </div>
-        ) : (
-          /* SPLIT EDITOR & PRODUCT SET ASSIGNER */
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            
-            {/* Left side: Section Configuration Fields (5 Cols) */}
-            <form onSubmit={handleSave} className="lg:col-span-5 space-y-4">
-              <div className="glass-card p-5 rounded-2xl border border-border bg-card space-y-4 shadow-sm">
-                
-                <div className="flex items-center justify-between border-b border-border/40 pb-3">
-                  <h3 className="font-heading text-sm font-black text-foreground uppercase tracking-wider flex items-center gap-1.5">
-                    <Sliders size={14} className="text-primary" />
-                    Collection Configuration
-                  </h3>
-                  <button
-                    type="button"
-                    onClick={() => setViewMode("list")}
-                    className="text-xs font-bold text-muted-foreground hover:text-foreground cursor-pointer flex items-center gap-1"
-                  >
-                    Cancel
-                  </button>
-                </div>
-
-                {/* Title */}
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Section Title</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Best Deal, Popular Products"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    className="w-full h-10 px-3 rounded-lg border border-border bg-muted/20 text-xs focus:ring-1 focus:ring-primary outline-none"
-                    required
-                  />
-                </div>
-
-                {/* Slug */}
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Route Slug (URL Key)</label>
-                  <input
-                    type="text"
-                    value={slug}
-                    disabled
-                    className="w-full h-10 px-3 rounded-lg border border-border bg-muted/50 text-xs text-muted-foreground font-mono outline-none cursor-not-allowed"
-                  />
-                </div>
-
-                {/* Description */}
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Subtitle Description</label>
-                  <textarea
-                    placeholder="e.g. Handpicked top items of the week at absolute lowest rates"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    className="w-full h-20 p-3 rounded-lg border border-border bg-muted/20 text-xs focus:ring-1 focus:ring-primary outline-none resize-none"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Display Order */}
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Display Order</label>
-                    <input
-                      type="number"
-                      placeholder="e.g. 1"
-                      value={displayOrder}
-                      onChange={(e) => setDisplayOrder(Number(e.target.value))}
-                      className="w-full h-10 px-3 rounded-lg border border-border bg-muted/20 text-xs focus:ring-1 focus:ring-primary outline-none font-bold"
-                    />
-                  </div>
-
-                  {/* Active Toggle */}
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Visibility Status</label>
-                    <button
-                      type="button"
-                      onClick={() => setIsActive(!isActive)}
-                      className={`w-full h-10 px-3 rounded-lg border text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                        isActive
-                          ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
-                          : "bg-zinc-500/10 text-muted-foreground border-border"
-                      }`}
-                    >
-                      {isActive ? <Check size={14} /> : null}
-                      <span>{isActive ? "Show on storefront" : "Hide section"}</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Submit button */}
-                <div className="pt-2 flex justify-end gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setViewMode("list")}
-                    className="h-10 px-4 rounded-lg border border-border bg-card text-foreground hover:bg-muted text-xs font-bold transition-all cursor-pointer"
-                  >
-                    Discard
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isCreating || isUpdating}
-                    className="h-10 px-5 rounded-lg bg-primary hover:bg-primary/90 text-white text-xs font-bold transition-all shadow-md hover:shadow-primary/20 flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <span>Save Collection</span>
-                  </button>
-                </div>
-
-              </div>
-            </form>
-
-            {/* Right side: Dynamic Product Assigner (7 Cols) */}
-            <div className="lg:col-span-7 space-y-6">
-              
-              {/* Product assignment list */}
-              <div className="glass-card p-5 rounded-2xl border border-border bg-card space-y-4 shadow-sm min-h-[300px]">
-                <h3 className="font-heading text-sm font-black text-foreground uppercase tracking-wider flex items-center gap-1.5 border-b border-border/40 pb-3">
-                  <ShoppingBag size={14} className="text-primary" />
-                  Assigned Products Set ({assignedProducts.length})
-                </h3>
-
-                {assignedProducts.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[400px] overflow-y-auto pr-1 custom-scrollbar">
-                    {assignedProducts.map((prod) => (
-                      <div
-                        key={prod._id}
-                        className="flex items-center justify-between gap-3 p-2.5 rounded-xl border border-border bg-muted/10 hover:bg-muted/20 transition-all"
-                      >
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <img
-                            src={prod.thumbnail || "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?q=80&w=100"}
-                            alt={prod.name}
-                            className="w-9 h-9 rounded-lg object-cover shrink-0 border border-border"
-                          />
-                          <div className="min-w-0 space-y-0.5">
-                            <h5 className="font-bold text-foreground text-xs truncate max-w-[160px]">{prod.name}</h5>
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-[10px] text-primary font-bold">
-                                ${prod.salePrice ?? prod.basePrice ?? "0"}
-                              </span>
-                              {prod.basePrice && prod.salePrice && prod.salePrice < prod.basePrice && (
-                                <span className="text-[9px] text-muted-foreground line-through">
-                                  ${prod.basePrice}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveProduct(prod._id)}
-                          className="p-1 hover:bg-rose-500/10 text-muted-foreground hover:text-rose-500 rounded transition-colors cursor-pointer"
-                          title="Remove product"
-                        >
-                          <X size={14} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="p-8 text-center text-muted-foreground space-y-1.5 border border-dashed border-border rounded-xl">
-                    <Package size={28} className="mx-auto text-muted/30" />
-                    <p className="text-xs font-bold">No Products Assigned</p>
-                    <p className="text-[9px]">Use the panel below to search and assign products to this campaign collection.</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Product Search & Selector */}
-              <div className="glass-card p-5 rounded-2xl border border-border bg-card space-y-4 shadow-sm">
-                <h3 className="font-heading text-sm font-black text-foreground uppercase tracking-wider flex items-center gap-1.5 border-b border-border/40 pb-3">
-                  <Search size={14} className="text-primary" />
-                  Search & Assign Products
-                </h3>
-
-                <div className="flex items-center h-10 w-full rounded-lg px-3 gap-2 border border-border bg-muted/20 focus-within:border-zinc-400 dark:focus-within:border-zinc-700 transition-all">
-                  <Search className="text-muted-foreground" size={14} />
-                  <input
-                    type="text"
-                    placeholder="Type to search product catalog..."
-                    value={productSearch}
-                    onChange={(e) => setProductSearch(e.target.value)}
-                    className="flex-1 outline-none text-xs bg-transparent border-none text-foreground placeholder:text-muted-foreground"
-                  />
-                  {productSearch && (
-                    <button type="button" onClick={() => setProductSearch("")} className="text-muted-foreground hover:text-foreground">
-                      <X size={14} />
-                    </button>
-                  )}
-                </div>
-
-                <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
-                  {isProductsLoading ? (
-                    <div className="flex justify-center p-6">
-                      <Loader size={24} />
-                    </div>
-                  ) : availableProducts.length > 0 ? (
-                    availableProducts.map((prod: any) => {
-                      const isAssigned = assignedProducts.some((p) => p._id === prod._id);
-                      return (
-                        <div
-                          key={prod._id}
-                          className="flex items-center justify-between p-2 rounded-xl border border-border/30 bg-muted/5 hover:bg-muted/10 transition-all"
-                        >
-                          <div className="flex items-center gap-2 min-w-0">
-                            <img
-                              src={prod.thumbnail || "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?q=80&w=100"}
-                              alt={prod.name}
-                              className="w-8 h-8 rounded-lg object-cover shrink-0 border border-border/50"
-                            />
-                            <div className="min-w-0">
-                              <h6 className="font-semibold text-foreground text-[11px] truncate max-w-[200px]">{prod.name}</h6>
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-[10px] text-muted-foreground font-semibold">
-                                  ${prod.salePrice ?? prod.basePrice ?? "0"}
-                                </span>
-                                {prod.basePrice && prod.salePrice && prod.salePrice < prod.basePrice && (
-                                  <span className="text-[9px] text-muted-foreground/60 line-through">
-                                    ${prod.basePrice}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <button
-                            type="button"
-                            onClick={() => handleAddProduct(prod)}
-                            disabled={isAssigned}
-                            className={`h-7 px-2.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                              isAssigned
-                                ? "bg-muted text-muted-foreground border border-border cursor-not-allowed"
-                                : "bg-primary/10 text-primary hover:bg-primary hover:text-white"
-                            }`}
-                          >
-                            {isAssigned ? (
-                              <>
-                                <Check size={10} />
-                                <span>Assigned</span>
-                              </>
-                            ) : (
-                              <>
-                                <Plus size={10} />
-                                <span>Add to Set</span>
-                              </>
-                            )}
-                          </button>
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <p className="text-center p-4 text-[10px] text-muted-foreground italic">
-                      No matching products found. Try typing a different search term.
-                    </p>
-                  )}
-                </div>
-
-              </div>
-
-            </div>
-
-          </div>
-        )}
-
+        {/* Storefront Customer Simulator */}
+        <StorefrontPreviewModal
+          isOpen={previewModalOpen}
+          onClose={() => {
+            setPreviewModalOpen(false);
+            setPreviewSection(null);
+          }}
+          section={previewSection}
+        />
       </div>
     </DashboardLayout>
   );

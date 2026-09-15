@@ -6,6 +6,7 @@ import { useGetAllInvoicesQuery } from "@/redux/features/invoice/invoiceApi";
 import Loader from "@/components/shared/Loader";
 import {
   Receipt, Search, Eye, X, Package, ChevronLeft, ChevronRight, CheckCircle2, Clock, XCircle, AlertCircle,
+  Calendar, Filter, RotateCcw, RefreshCw,
 } from "lucide-react";
 import InvoiceSlideOver from "@/components/ui/commerce/invoices/InvoiceSlideOver";
 import {
@@ -21,6 +22,51 @@ import { Badge } from "@/components/ui/badge";
 const PAYMENT_METHODS = ["all", "bkash", "nagad", "cod", "online_payment"];
 const PAYMENT_STATUSES = ["all", "paid", "pending", "failed", "cancelled"];
 const LIMITS = [10, 20, 50];
+
+type DatePreset = "all" | "today" | "yesterday" | "week" | "month" | "last_month" | "year" | "custom";
+
+const formatDateToInput = (d: Date) => {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const getPresetDates = (preset: DatePreset) => {
+  const now = new Date();
+  switch (preset) {
+    case "today": {
+      const todayStr = formatDateToInput(now);
+      return { start: todayStr, end: todayStr };
+    }
+    case "yesterday": {
+      const y = new Date(now);
+      y.setDate(y.getDate() - 1);
+      const yStr = formatDateToInput(y);
+      return { start: yStr, end: yStr };
+    }
+    case "week": {
+      const w = new Date(now);
+      w.setDate(w.getDate() - 6);
+      return { start: formatDateToInput(w), end: formatDateToInput(now) };
+    }
+    case "month": {
+      const first = new Date(now.getFullYear(), now.getMonth(), 1);
+      return { start: formatDateToInput(first), end: formatDateToInput(now) };
+    }
+    case "last_month": {
+      const first = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const last = new Date(now.getFullYear(), now.getMonth(), 0);
+      return { start: formatDateToInput(first), end: formatDateToInput(last) };
+    }
+    case "year": {
+      const first = new Date(now.getFullYear(), 0, 1);
+      return { start: formatDateToInput(first), end: formatDateToInput(now) };
+    }
+    default:
+      return { start: "", end: "" };
+  }
+};
 
 function useDebounce(value: string, delay: number) {
   const [debounced, setDebounced] = useState(value);
@@ -39,10 +85,42 @@ export default function InvoicesPage() {
   const [search, setSearch] = useState("");
   const [selectedInvoice, setSelectedInvoice] = useState<any | null>(null);
 
+  // Date Filtering States
+  const [datePreset, setDatePreset] = useState<DatePreset>("all");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
+  const handlePresetSelect = (preset: DatePreset) => {
+    setDatePreset(preset);
+    if (preset === "all") {
+      setStartDate("");
+      setEndDate("");
+    } else if (preset !== "custom") {
+      const { start, end } = getPresetDates(preset);
+      setStartDate(start);
+      setEndDate(end);
+    }
+    setPage(1);
+  };
+
+  const handleCustomDateChange = (start: string, end: string) => {
+    setDatePreset("custom");
+    setStartDate(start);
+    setEndDate(end);
+    setPage(1);
+  };
+
+  const handleClearDateFilter = () => {
+    setDatePreset("all");
+    setStartDate("");
+    setEndDate("");
+    setPage(1);
+  };
+
   const debouncedSearch = useDebounce(search, 400);
 
   // Reset to page 1 on filter changes
-  useEffect(() => { setPage(1); }, [debouncedSearch, paymentStatus, paymentMethod, limit]);
+  useEffect(() => { setPage(1); }, [debouncedSearch, paymentStatus, paymentMethod, limit, startDate, endDate]);
 
   const queryParams = useMemo(() => ({
     page,
@@ -50,12 +128,21 @@ export default function InvoicesPage() {
     ...(paymentStatus !== "all" && { paymentStatus }),
     ...(paymentMethod !== "all" && { paymentMethod }),
     ...(debouncedSearch && { search: debouncedSearch }),
-  }), [page, limit, paymentStatus, paymentMethod, debouncedSearch]);
+    ...(startDate && { startDate }),
+    ...(endDate && { endDate }),
+  }), [page, limit, paymentStatus, paymentMethod, debouncedSearch, startDate, endDate]);
 
   const { data: invoicesRes, isLoading, isFetching } = useGetAllInvoicesQuery(queryParams);
 
   const invoices: any[] = invoicesRes?.data || [];
-  const meta = invoicesRes?.meta || { total: 0, page: 1, limit: 20, totalPages: 1 };
+  const meta = invoicesRes?.meta || { total: 0, page: 1, limit: 20, totalPages: 1, stats: undefined };
+
+  const stats = meta.stats || {
+    totalInvoices: meta.total || invoices.length,
+    paidCount: invoices.filter((i) => i.paymentStatus === "paid").length,
+    pendingCount: invoices.filter((i) => i.paymentStatus === "pending").length,
+    failedCount: invoices.filter((i) => i.paymentStatus === "failed" || i.paymentStatus === "cancelled").length,
+  };
 
   const formatMethod = (m: string) => {
     const map: Record<string, string> = { bkash: "bKash", nagad: "Nagad", cod: "Cash on Delivery", online_payment: "Online Card" };
@@ -127,21 +214,117 @@ export default function InvoicesPage() {
         {/* Stats Row */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: "Total Invoices", value: meta.total, color: "text-indigo-500", bg: "bg-indigo-500/10" },
-            { label: "Paid", value: "-", color: "text-emerald-500", bg: "bg-emerald-500/10" },
-            { label: "Pending", value: "-", color: "text-amber-500", bg: "bg-amber-500/10" },
-            { label: "Failed / Cancelled", value: "-", color: "text-rose-500", bg: "bg-rose-500/10" },
+            { label: "Total Invoices", value: stats.totalInvoices, color: "text-indigo-500", bg: "bg-indigo-500/10" },
+            { label: "Paid", value: stats.paidCount, color: "text-emerald-500", bg: "bg-emerald-500/10" },
+            { label: "Pending", value: stats.pendingCount, color: "text-amber-500", bg: "bg-amber-500/10" },
+            { label: "Failed / Cancelled", value: stats.failedCount, color: "text-rose-500", bg: "bg-rose-500/10" },
           ].map((s, i) => (
-            <div key={i} className="glass-card rounded-xl border border-border bg-card p-4 flex items-center gap-3">
+            <div key={i} className="glass-card rounded-xl border border-border bg-card p-4 flex items-center gap-3 shadow-xs">
               <div className={`w-9 h-9 rounded-lg ${s.bg} flex items-center justify-center shrink-0`}>
                 <Receipt size={16} className={s.color} />
               </div>
               <div>
                 <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{s.label}</p>
-                <p className={`text-lg font-black ${s.color}`}>{i === 0 ? meta.total : "—"}</p>
+                <p className={`text-lg font-black ${s.color}`}>{s.value}</p>
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Date Filter & Control Bar */}
+        <div className="glass-card p-3.5 sm:p-4 rounded-2xl border border-border bg-card shadow-xs space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2 border-b border-border/50">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <Calendar size={14} />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-foreground">Date Range Filter</span>
+                {isFetching && (
+                  <RefreshCw size={12} className="animate-spin text-primary" />
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              {(startDate || endDate || datePreset !== "all") && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] font-semibold text-primary bg-primary/10 px-2.5 py-1 rounded-md border border-primary/20 flex items-center gap-1">
+                    <Filter size={11} />
+                    <span>
+                      {startDate && endDate
+                        ? `${startDate} ~ ${endDate}`
+                        : startDate
+                        ? `From ${startDate}`
+                        : `Until ${endDate}`}
+                    </span>
+                    <span className="opacity-75 font-normal">({meta.total} records)</span>
+                  </span>
+                  <button
+                    onClick={handleClearDateFilter}
+                    className="text-[11px] font-bold text-rose-500 hover:text-rose-600 dark:hover:text-rose-400 bg-rose-500/10 hover:bg-rose-500/15 px-2.5 py-1 rounded-md transition-all flex items-center gap-1 cursor-pointer"
+                    title="Reset date filter"
+                  >
+                    <RotateCcw size={11} />
+                    <span>Clear</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+            {/* Quick Presets */}
+            <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-1 md:pb-0 max-w-full">
+              {[
+                { id: "all", label: "All Time" },
+                { id: "today", label: "Today" },
+                { id: "yesterday", label: "Yesterday" },
+                { id: "week", label: "Last 7 Days" },
+                { id: "month", label: "This Month" },
+                { id: "last_month", label: "Last Month" },
+                { id: "year", label: "This Year" },
+                { id: "custom", label: "Custom Range" },
+              ].map((preset) => (
+                <button
+                  key={preset.id}
+                  onClick={() => handlePresetSelect(preset.id as DatePreset)}
+                  className={`px-3 py-1.5 text-[11px] font-bold rounded-lg transition-all whitespace-nowrap cursor-pointer ${
+                    datePreset === preset.id
+                      ? "bg-primary text-primary-foreground shadow-sm scale-[1.02]"
+                      : "bg-muted/70 hover:bg-muted text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Custom Range Inputs */}
+            {(datePreset === "custom" || startDate || endDate) && (
+              <div className="flex items-center gap-2 shrink-0 animate-fade-in self-start md:self-auto">
+                <div className="flex items-center gap-1 bg-muted/60 px-2.5 py-1.5 rounded-lg border border-border">
+                  <span className="text-[10px] uppercase font-bold text-muted-foreground">From</span>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => handleCustomDateChange(e.target.value, endDate)}
+                    className="bg-transparent text-xs font-semibold text-foreground outline-none cursor-pointer"
+                  />
+                </div>
+                <span className="text-xs text-muted-foreground font-bold">~</span>
+                <div className="flex items-center gap-1 bg-muted/60 px-2.5 py-1.5 rounded-lg border border-border">
+                  <span className="text-[10px] uppercase font-bold text-muted-foreground">To</span>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => handleCustomDateChange(startDate, e.target.value)}
+                    className="bg-transparent text-xs font-semibold text-foreground outline-none cursor-pointer"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Toolbar */}
@@ -225,8 +408,47 @@ export default function InvoicesPage() {
                         <span className="text-[10px] text-muted-foreground truncate max-w-[160px]">{inv.user?.email || ""}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="p-4 text-muted-foreground font-mono text-[11px] whitespace-nowrap">
-                      {new Date(inv.invoiceDate || inv.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+                    <TableCell className="p-4 whitespace-nowrap">
+                      <div className="flex flex-col">
+                        <div className="flex items-center gap-1.5 font-semibold text-foreground text-xs">
+                          <span>
+                            {new Date(inv.invoiceDate || inv.createdAt).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            })}
+                          </span>
+                          {(() => {
+                            const dateVal = inv.invoiceDate || inv.createdAt;
+                            if (!dateVal) return null;
+                            const d = new Date(dateVal);
+                            const today = new Date();
+                            if (d.toDateString() === today.toDateString()) {
+                              return (
+                                <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-primary/15 text-primary border border-primary/20">
+                                  Today
+                                </span>
+                              );
+                            }
+                            const yesterday = new Date(today);
+                            yesterday.setDate(yesterday.getDate() - 1);
+                            if (d.toDateString() === yesterday.toDateString()) {
+                              return (
+                                <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                                  Yesterday
+                                </span>
+                              );
+                            }
+                            return null;
+                          })()}
+                        </div>
+                        <span className="text-[10px] text-muted-foreground font-mono">
+                          {new Date(inv.invoiceDate || inv.createdAt).toLocaleTimeString("en-US", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      </div>
                     </TableCell>
                     <TableCell className="p-4">
                       <span className="flex items-center gap-1.5 font-semibold text-foreground whitespace-nowrap">

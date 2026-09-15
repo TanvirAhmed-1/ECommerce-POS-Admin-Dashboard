@@ -14,10 +14,15 @@ import {
   FolderTree,
   Tag,
   Layers,
+  Boxes,
   Images,
   CreditCard,
+  DollarSign,
+  Palette,
+  Building2,
 } from "lucide-react";
 import React from "react";
+
 
 export interface SidebarLink {
   title: string;
@@ -44,26 +49,6 @@ export const zenithDashboardLinks: SidebarGroup[] = [
         title: "Analytics",
         route: "/analytics",
         icon: <BarChart3 size={18} />,
-      },
-      {
-        title: "eCommerce",
-        route: "/ecommerce",
-        icon: <ShoppingBag size={18} />,
-      },
-      {
-        title: "CRM",
-        route: "/crm",
-        icon: <Users size={18} />,
-      },
-      {
-        title: "SaaS",
-        route: "/saas",
-        icon: <Sparkles size={18} />,
-      },
-      {
-        title: "Charts",
-        route: "/charts",
-        icon: <TrendingUp size={18} />,
       },
     ],
   },
@@ -97,9 +82,9 @@ export const zenithDashboardLinks: SidebarGroup[] = [
         icon: <Sliders size={18} />,
       },
       {
-        title: "Variants",
-        route: "/variants",
-        icon: <Layers size={18} />,
+        title: "Stocks",
+        route: "/stocks",
+        icon: <Boxes size={18} />,
       },
       {
         title: "Customers",
@@ -121,8 +106,14 @@ export const zenithDashboardLinks: SidebarGroup[] = [
         route: "/payments",
         icon: <CreditCard size={18} />,
       },
+      {
+        title: "Accounting",
+        route: "/accounting",
+        icon: <DollarSign size={18} />,
+      },
     ],
   },
+
   {
     groupName: "APPS",
     links: [
@@ -162,9 +153,14 @@ export const zenithDashboardLinks: SidebarGroup[] = [
     groupName: "SETTINGS",
     links: [
       {
-        title: "Settings",
+        title: "Color & Theme Settings",
         route: "/settings",
-        icon: <Sliders size={18} />,
+        icon: <Palette size={18} />,
+      },
+      {
+        title: "Company Info",
+        route: "/company-info",
+        icon: <Building2 size={18} />,
       },
     ],
   },

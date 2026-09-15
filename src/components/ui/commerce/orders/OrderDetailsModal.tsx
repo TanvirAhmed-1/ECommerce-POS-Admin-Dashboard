@@ -267,7 +267,7 @@ export default function OrderDetailsModal({
             </div>
 
             <div className="border border-border rounded-xl divide-y divide-border/60 overflow-hidden bg-card">
-              {itemsAnalysis.map((item, idx) => {
+              {itemsAnalysis.map((item: any, idx: number) => {
                 const prodName = item.product?.name || "Ordered Product";
                 const pThumb =
                   item.product?.thumbnail ||

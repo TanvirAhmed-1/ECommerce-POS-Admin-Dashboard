@@ -26,12 +26,65 @@ import {
   Phone,
   MapPin,
   CreditCard,
-  Calendar,
   XCircle,
   Truck,
   Package,
+  Plus,
+  Receipt,
+  Calendar,
+  Filter,
+  RotateCcw,
+  RefreshCw,
 } from "lucide-react";
 import OrderDetailsModal from "@/components/ui/commerce/orders/OrderDetailsModal";
+import CreateOrderModal from "@/components/ui/commerce/orders/CreateOrderModal";
+import InvoiceSlideOver from "@/components/ui/commerce/invoices/InvoiceSlideOver";
+
+type DatePreset = "all" | "today" | "yesterday" | "week" | "month" | "last_month" | "year" | "custom";
+
+const formatDateToInput = (d: Date) => {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const getPresetDates = (preset: DatePreset) => {
+  const now = new Date();
+  switch (preset) {
+    case "today": {
+      const todayStr = formatDateToInput(now);
+      return { start: todayStr, end: todayStr };
+    }
+    case "yesterday": {
+      const y = new Date(now);
+      y.setDate(y.getDate() - 1);
+      const yStr = formatDateToInput(y);
+      return { start: yStr, end: yStr };
+    }
+    case "week": {
+      const w = new Date(now);
+      w.setDate(w.getDate() - 6);
+      return { start: formatDateToInput(w), end: formatDateToInput(now) };
+    }
+    case "month": {
+      const first = new Date(now.getFullYear(), now.getMonth(), 1);
+      return { start: formatDateToInput(first), end: formatDateToInput(now) };
+    }
+    case "last_month": {
+      const first = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const last = new Date(now.getFullYear(), now.getMonth(), 0);
+      return { start: formatDateToInput(first), end: formatDateToInput(last) };
+    }
+    case "year": {
+      const first = new Date(now.getFullYear(), 0, 1);
+      return { start: formatDateToInput(first), end: formatDateToInput(now) };
+    }
+    default:
+      return { start: "", end: "" };
+  }
+};
+
 
 // Mock orders fallback in case database is empty
 const mockOrders = [
@@ -204,9 +257,43 @@ export default function OrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
   const [confirmModalOrder, setConfirmModalOrder] = useState<any | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; orderNumber: string } | null>(null);
+  const [isCreateOrderOpen, setIsCreateOrderOpen] = useState(false);
+  const [activeInvoiceForPreview, setActiveInvoiceForPreview] = useState<any | null>(null);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(20); // Default to 20 items per page
+
+  // Date Filter States
+  const [datePreset, setDatePreset] = useState<DatePreset>("all");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
+  const handlePresetSelect = (preset: DatePreset) => {
+    setDatePreset(preset);
+    if (preset === "all") {
+      setStartDate("");
+      setEndDate("");
+    } else if (preset !== "custom") {
+      const { start, end } = getPresetDates(preset);
+      setStartDate(start);
+      setEndDate(end);
+    }
+    setCurrentPage(1);
+  };
+
+  const handleCustomDateChange = (start: string, end: string) => {
+    setDatePreset("custom");
+    setStartDate(start);
+    setEndDate(end);
+    setCurrentPage(1);
+  };
+
+  const handleClearDateFilter = () => {
+    setDatePreset("all");
+    setStartDate("");
+    setEndDate("");
+    setCurrentPage(1);
+  };
 
   // Debounce search query to prevent backend request spamming
   useEffect(() => {
@@ -216,17 +303,19 @@ export default function OrdersPage() {
     return () => clearTimeout(handler);
   }, [searchQuery]);
 
-  // Reset page when tab or debounced search query changes
+  // Reset page when tab, debounced search query, or date range changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [activeTab, debouncedSearchQuery]);
+  }, [activeTab, debouncedSearchQuery, startDate, endDate]);
 
-  // Backend paginated query
-  const { data: ordersRes, isLoading, refetch } = useGetAllOrdersQuery({
+  // Backend paginated query with date filtering
+  const { data: ordersRes, isLoading, isFetching, refetch } = useGetAllOrdersQuery({
     page: currentPage,
     limit: itemsPerPage,
     searchTerm: debouncedSearchQuery,
     status: activeTab === "All" ? "" : activeTab.toLowerCase(),
+    startDate: startDate || undefined,
+    endDate: endDate || undefined,
   });
 
   const [updateOrderStatus, { isLoading: isUpdating }] = useUpdateOrderStatusMutation();
@@ -279,11 +368,24 @@ export default function OrdersPage() {
         userEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
         userPhone.includes(searchQuery);
 
-      return matchesTab && matchesSearch;
+      let matchesDate = true;
+      if (startDate || endDate) {
+        const ordTime = new Date(ord.createdAt).getTime();
+        if (startDate) {
+          const sTime = new Date(`${startDate}T00:00:00`).getTime();
+          if (ordTime < sTime) matchesDate = false;
+        }
+        if (endDate) {
+          const eTime = new Date(`${endDate}T23:59:59.999`).getTime();
+          if (ordTime > eTime) matchesDate = false;
+        }
+      }
+
+      return matchesTab && matchesSearch && matchesDate;
     });
 
     return filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-  }, [orders, isMock, activeTab, searchQuery, currentPage, itemsPerPage]);
+  }, [orders, isMock, activeTab, searchQuery, startDate, endDate, currentPage, itemsPerPage]);
 
   // Global Statistics (using aggregated metadata from backend, or client-side mock values)
   const stats = useMemo(() => {
@@ -299,16 +401,25 @@ export default function OrdersPage() {
     }
 
     // Client-side fallback for mock data
-    const total = mockOrders.length;
-    const pending = mockOrders.filter((o) => o.orderStatus === "pending").length;
-    const processing = mockOrders.filter((o) => o.orderStatus === "processing").length;
-    const completed = mockOrders.filter((o) => o.orderStatus === "delivered").length;
-    const revenue = mockOrders
+    const filteredForStats = mockOrders.filter((ord: any) => {
+      if (startDate || endDate) {
+        const ordTime = new Date(ord.createdAt).getTime();
+        if (startDate && ordTime < new Date(`${startDate}T00:00:00`).getTime()) return false;
+        if (endDate && ordTime > new Date(`${endDate}T23:59:59.999`).getTime()) return false;
+      }
+      return true;
+    });
+
+    const total = filteredForStats.length;
+    const pending = filteredForStats.filter((o) => o.orderStatus === "pending").length;
+    const processing = filteredForStats.filter((o) => o.orderStatus === "processing").length;
+    const completed = filteredForStats.filter((o) => o.orderStatus === "delivered").length;
+    const revenue = filteredForStats
       .filter((o) => o.orderStatus === "delivered" || o.payment?.status === "paid")
       .reduce((sum, o) => sum + (o.totalAmount || 0), 0);
 
     return { total, pending, processing, completed, revenue };
-  }, [ordersRes, isMock]);
+  }, [ordersRes, isMock, startDate, endDate]);
 
   // Pagination totals
   const totalPages = useMemo(() => {
@@ -321,11 +432,17 @@ export default function OrdersPage() {
       const matchesTab = activeTab === "All" || ord.orderStatus?.toLowerCase() === activeTab.toLowerCase();
       const matchesSearch = ord.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (ord.shippingAddress?.fullName || "").toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesTab && matchesSearch;
+      let matchesDate = true;
+      if (startDate || endDate) {
+        const ordTime = new Date(ord.createdAt).getTime();
+        if (startDate && ordTime < new Date(`${startDate}T00:00:00`).getTime()) matchesDate = false;
+        if (endDate && ordTime > new Date(`${endDate}T23:59:59.999`).getTime()) matchesDate = false;
+      }
+      return matchesTab && matchesSearch && matchesDate;
     }).length;
 
     return Math.max(1, Math.ceil(filteredCount / itemsPerPage));
-  }, [ordersRes, isMock, activeTab, searchQuery, itemsPerPage]);
+  }, [ordersRes, isMock, activeTab, searchQuery, startDate, endDate, itemsPerPage]);
 
   const totalEntries = useMemo(() => {
     if (!isMock && ordersRes?.data?.meta?.total !== undefined) {
@@ -337,9 +454,15 @@ export default function OrdersPage() {
       const matchesTab = activeTab === "All" || ord.orderStatus?.toLowerCase() === activeTab.toLowerCase();
       const matchesSearch = ord.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (ord.shippingAddress?.fullName || "").toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesTab && matchesSearch;
+      let matchesDate = true;
+      if (startDate || endDate) {
+        const ordTime = new Date(ord.createdAt).getTime();
+        if (startDate && ordTime < new Date(`${startDate}T00:00:00`).getTime()) matchesDate = false;
+        if (endDate && ordTime > new Date(`${endDate}T23:59:59.999`).getTime()) matchesDate = false;
+      }
+      return matchesTab && matchesSearch && matchesDate;
     }).length;
-  }, [ordersRes, isMock, activeTab, searchQuery]);
+  }, [ordersRes, isMock, activeTab, searchQuery, startDate, endDate]);
 
   // Visible page button selector range
   const pageNumbers = useMemo(() => {
@@ -611,20 +734,31 @@ export default function OrdersPage() {
       <div className="space-y-6 animate-fade-in max-w-[1600px] mx-auto p-1 md:p-6">
 
         {/* Breadcrumb & Title */}
-        <div className="space-y-1">
-          <div className="flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
-            <span>Dashboard</span>
-            <span className="opacity-50">/</span>
-            <span className="text-foreground">Orders</span>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+              <span>Dashboard</span>
+              <span className="opacity-50">/</span>
+              <span className="text-foreground">Orders</span>
+            </div>
+            <h2 className="text-2xl font-black font-heading text-foreground tracking-tight flex items-center gap-2">
+              <ShoppingBag className="text-primary" size={24} />
+              Orders Management
+            </h2>
+            <p className="text-xs text-muted-foreground max-w-xl">
+              Track shipment stages, review detailed invoices, examine customer contact details, modify status pipelines, and manage transactions.
+            </p>
           </div>
-          <h2 className="text-2xl font-black font-heading text-foreground tracking-tight flex items-center gap-2">
-            <ShoppingBag className="text-primary" size={24} />
-            Orders Management
-          </h2>
-          <p className="text-xs text-muted-foreground max-w-xl">
-            Track shipment stages, review detailed invoices, examine customer contact details, modify status pipelines, and manage transactions.
-          </p>
+
+          <button
+            onClick={() => setIsCreateOrderOpen(true)}
+            className="h-10 px-4 bg-gradient-to-r from-primary to-primary/85 hover:from-primary/95 hover:to-primary text-white text-xs font-bold rounded-xl shadow-lg shadow-primary/20 flex items-center gap-2 cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98] shrink-0 self-start sm:self-auto"
+          >
+            <Plus size={16} />
+            <span>New POS Sale / Order</span>
+          </button>
         </div>
+
 
         {/* Stats Blocks */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -666,6 +800,102 @@ export default function OrdersPage() {
               <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Total Sales</p>
               <h3 className="text-lg font-black text-foreground">${stats.revenue.toLocaleString()}</h3>
             </div>
+          </div>
+        </div>
+
+        {/* Date Filter & Control Bar */}
+        <div className="glass-card p-3.5 sm:p-4 rounded-2xl border border-border bg-card shadow-xs space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2 border-b border-border/50">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <Calendar size={14} />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-foreground">Date Range Filter</span>
+                {isFetching && (
+                  <RefreshCw size={12} className="animate-spin text-primary" />
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              {(startDate || endDate || datePreset !== "all") && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] font-semibold text-primary bg-primary/10 px-2.5 py-1 rounded-md border border-primary/20 flex items-center gap-1">
+                    <Filter size={11} />
+                    <span>
+                      {startDate && endDate
+                        ? `${startDate} ~ ${endDate}`
+                        : startDate
+                        ? `From ${startDate}`
+                        : `Until ${endDate}`}
+                    </span>
+                    <span className="opacity-75 font-normal">({totalEntries} records)</span>
+                  </span>
+                  <button
+                    onClick={handleClearDateFilter}
+                    className="text-[11px] font-bold text-rose-500 hover:text-rose-600 dark:hover:text-rose-400 bg-rose-500/10 hover:bg-rose-500/15 px-2.5 py-1 rounded-md transition-all flex items-center gap-1 cursor-pointer"
+                    title="Reset date filter"
+                  >
+                    <RotateCcw size={11} />
+                    <span>Clear</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+            {/* Quick Presets */}
+            <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-1 md:pb-0 max-w-full">
+              {[
+                { id: "all", label: "All Time" },
+                { id: "today", label: "Today" },
+                { id: "yesterday", label: "Yesterday" },
+                { id: "week", label: "Last 7 Days" },
+                { id: "month", label: "This Month" },
+                { id: "last_month", label: "Last Month" },
+                { id: "year", label: "This Year" },
+                { id: "custom", label: "Custom Range" },
+              ].map((preset) => (
+                <button
+                  key={preset.id}
+                  onClick={() => handlePresetSelect(preset.id as DatePreset)}
+                  className={`px-3 py-1.5 text-[11px] font-bold rounded-lg transition-all whitespace-nowrap cursor-pointer ${
+                    datePreset === preset.id
+                      ? "bg-primary text-primary-foreground shadow-sm scale-[1.02]"
+                      : "bg-muted/70 hover:bg-muted text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Custom Range Inputs */}
+            {(datePreset === "custom" || startDate || endDate) && (
+              <div className="flex items-center gap-2 shrink-0 animate-fade-in self-start md:self-auto">
+                <div className="flex items-center gap-1 bg-muted/60 px-2.5 py-1.5 rounded-lg border border-border">
+                  <span className="text-[10px] uppercase font-bold text-muted-foreground">From</span>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => handleCustomDateChange(e.target.value, endDate)}
+                    className="bg-transparent text-xs font-semibold text-foreground outline-none cursor-pointer"
+                  />
+                </div>
+                <span className="text-xs text-muted-foreground font-bold">~</span>
+                <div className="flex items-center gap-1 bg-muted/60 px-2.5 py-1.5 rounded-lg border border-border">
+                  <span className="text-[10px] uppercase font-bold text-muted-foreground">To</span>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => handleCustomDateChange(startDate, e.target.value)}
+                    className="bg-transparent text-xs font-semibold text-foreground outline-none cursor-pointer"
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -803,7 +1033,39 @@ export default function OrdersPage() {
                         </td>
 
                         {/* Date Created */}
-                        <td className="p-4 text-muted-foreground font-medium">{formattedDate}</td>
+                        <td className="p-4">
+                          <div className="flex flex-col">
+                            <div className="flex items-center gap-1.5 font-semibold text-foreground text-xs">
+                              <span>{ord.createdAt ? new Date(ord.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "N/A"}</span>
+                              {(() => {
+                                if (!ord.createdAt) return null;
+                                const d = new Date(ord.createdAt);
+                                const today = new Date();
+                                const isToday = d.toDateString() === today.toDateString();
+                                if (isToday) {
+                                  return (
+                                    <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-primary/15 text-primary border border-primary/20">
+                                      Today
+                                    </span>
+                                  );
+                                }
+                                const yesterday = new Date(today);
+                                yesterday.setDate(yesterday.getDate() - 1);
+                                if (d.toDateString() === yesterday.toDateString()) {
+                                  return (
+                                    <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                                      Yesterday
+                                    </span>
+                                  );
+                                }
+                                return null;
+                              })()}
+                            </div>
+                            <span className="text-[10px] text-muted-foreground font-mono">
+                              {ord.createdAt ? new Date(ord.createdAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }) : ""}
+                            </span>
+                          </div>
+                        </td>
 
                         {/* Total Bill */}
                         <td className="p-4 text-right font-black text-foreground">
@@ -1222,7 +1484,44 @@ export default function OrdersPage() {
           isUpdatingStatus={isUpdating}
         />
 
+        {/* Create POS Order / Quick Sale Modal */}
+        <CreateOrderModal
+          isOpen={isCreateOrderOpen}
+          onClose={() => setIsCreateOrderOpen(false)}
+          onOrderCreated={(newOrder, invoice) => {
+            refetch();
+            if (invoice) {
+              setActiveInvoiceForPreview(invoice);
+            } else if (newOrder) {
+              setConfirmModalOrder(newOrder);
+            }
+          }}
+        />
+
+        {/* Instant Invoice SlideOver Preview */}
+        {activeInvoiceForPreview && (
+          <InvoiceSlideOver
+            selectedInvoice={activeInvoiceForPreview}
+            onClose={() => setActiveInvoiceForPreview(null)}
+            formatMethod={(m: string) => {
+              const map: Record<string, string> = {
+                bkash: "bKash",
+                nagad: "Nagad",
+                cod: "Cash on Delivery",
+                online_payment: "Online Card",
+                cash: "Cash / POS",
+                card: "Credit/Debit Card",
+                pos: "POS Terminal",
+                bank_transfer: "Bank Transfer",
+              };
+              return map[m?.toLowerCase()] || m || "Cash";
+            }}
+            statusBadge={(s: string) => getPaymentBadge(s)}
+          />
+        )}
+
       </div>
     </DashboardLayout>
   );
 }
+
