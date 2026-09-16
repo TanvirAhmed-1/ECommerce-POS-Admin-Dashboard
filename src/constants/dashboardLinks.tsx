@@ -20,6 +20,7 @@ import {
   DollarSign,
   Palette,
   Building2,
+  Store,
 } from "lucide-react";
 import React from "react";
 
@@ -55,6 +56,11 @@ export const zenithDashboardLinks: SidebarGroup[] = [
   {
     groupName: "COMMERCE",
     links: [
+      {
+        title: "POS Terminal",
+        route: "/pos",
+        icon: <Store size={18} />,
+      },
       {
         title: "Orders",
         route: "/orders",

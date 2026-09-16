@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useState, useEffect } from "react";
+import Link from "next/link";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import {
   useGetAllOrdersQuery,
@@ -35,6 +36,7 @@ import {
   Filter,
   RotateCcw,
   RefreshCw,
+  Store,
 } from "lucide-react";
 import OrderDetailsModal from "@/components/ui/commerce/orders/OrderDetailsModal";
 import CreateOrderModal from "@/components/ui/commerce/orders/CreateOrderModal";
@@ -750,13 +752,15 @@ export default function OrdersPage() {
             </p>
           </div>
 
-          <button
-            onClick={() => setIsCreateOrderOpen(true)}
-            className="h-10 px-4 bg-gradient-to-r from-primary to-primary/85 hover:from-primary/95 hover:to-primary text-white text-xs font-bold rounded-xl shadow-lg shadow-primary/20 flex items-center gap-2 cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98] shrink-0 self-start sm:self-auto"
-          >
-            <Plus size={16} />
-            <span>New POS Sale / Order</span>
-          </button>
+          <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+            <Link
+              href="/pos"
+              className="h-10 px-4.5 bg-gradient-to-r from-primary to-indigo-600 hover:from-primary/95 hover:to-indigo-500 text-white text-xs font-black rounded-xl shadow-lg shadow-primary/25 flex items-center gap-2 cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98] border border-white/10"
+            >
+              <Store size={16} className="text-white/90" />
+              <span>Open POS Terminal</span>
+            </Link>
+          </div>
         </div>
 
 

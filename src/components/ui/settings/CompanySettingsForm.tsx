@@ -7,7 +7,6 @@ import {
   Mail,
   MapPin,
   Globe,
-  Facebook,
   FileCode,
   Image as ImageIcon,
   Clock,
