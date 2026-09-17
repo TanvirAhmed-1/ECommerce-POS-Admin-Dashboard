@@ -6,7 +6,6 @@ import {
   Plus,
   TrendingDown,
   TrendingUp,
-  DollarSign,
   Tag,
   Wallet,
   Calendar,

@@ -17,11 +17,11 @@ import {
   Boxes,
   Images,
   CreditCard,
-  DollarSign,
   Palette,
   Building2,
   Store,
 } from "lucide-react";
+import { TbCurrencyTaka } from "react-icons/tb";
 import React from "react";
 
 
@@ -115,7 +115,7 @@ export const zenithDashboardLinks: SidebarGroup[] = [
       {
         title: "Accounting",
         route: "/accounting",
-        icon: <DollarSign size={18} />,
+        icon: <TbCurrencyTaka size={18} />,
       },
     ],
   },

@@ -8,7 +8,6 @@ import {
 } from "@/redux/features/accounting/accountingApi";
 import Loader from "@/components/shared/Loader";
 import {
-  DollarSign,
   Plus,
   Printer,
   Calendar,
@@ -19,6 +18,7 @@ import {
   Clock,
   Sparkles,
 } from "lucide-react";
+import { TbCurrencyTaka } from "react-icons/tb";
 import AccountingMetricCards from "@/components/ui/commerce/accounting/AccountingMetricCards";
 import AccountWalletsRow from "@/components/ui/commerce/accounting/AccountWalletsRow";
 import CashFlowCharts from "@/components/ui/commerce/accounting/CashFlowCharts";
@@ -183,7 +183,7 @@ export default function AccountingPage() {
                 <span className="text-primary font-black">Accounting</span>
               </div>
               <h2 className="text-2xl font-black font-heading text-foreground tracking-tight flex items-center gap-2">
-                <DollarSign className="text-primary" size={24} />
+                <TbCurrencyTaka className="text-primary" size={24} />
                 E-Commerce Accounting & Finance
               </h2>
               <p className="text-xs text-muted-foreground max-w-xl">

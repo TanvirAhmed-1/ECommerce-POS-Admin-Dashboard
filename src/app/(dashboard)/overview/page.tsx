@@ -8,7 +8,6 @@ import Loader from "@/components/shared/Loader";
 import {
   TrendingUp,
   TrendingDown,
-  DollarSign,
   Users,
   ShoppingCart,
   Eye,
@@ -22,6 +21,7 @@ import {
   RotateCcw,
   Check,
 } from "lucide-react";
+import { TbCurrencyTaka } from "react-icons/tb";
 
 type DatePreset = "all" | "today" | "yesterday" | "week" | "month" | "last_month" | "year" | "custom";
 
@@ -112,12 +112,7 @@ export default function OverviewPage() {
   }, []);
 
   const formatMoney = (val: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(val);
+    return `৳${Number(val || 0).toLocaleString()}`;
   };
 
   // Process data with fallbacks
@@ -330,7 +325,7 @@ export default function OverviewPage() {
                 </h3>
               </div>
               <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-orange-500/10 text-orange-600 dark:bg-orange-500/15 dark:text-orange-400">
-                <DollarSign size={18} />
+                <TbCurrencyTaka size={18} />
               </div>
             </div>
             <div className="mt-4 flex items-center gap-1 text-[11px]">

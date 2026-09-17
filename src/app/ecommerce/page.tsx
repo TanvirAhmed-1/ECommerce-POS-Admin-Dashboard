@@ -3,7 +3,6 @@
 import React, { useMemo } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import {
-  DollarSign,
   ShoppingCart,
   Percent,
   TrendingUp,
@@ -15,6 +14,7 @@ import {
   TrendingDown,
   ShoppingBag,
 } from "lucide-react";
+import { TbCurrencyTaka } from "react-icons/tb";
 
 import { useGetOverviewQuery, useGetDashboardAnalyticsQuery } from "@/redux/features/dashboard/dashboardApi";
 import Loader from "@/components/shared/Loader";
@@ -77,12 +77,7 @@ export default function EcommerceAnalyticsPage() {
   }, [backendProducts]);
 
   const formatMoney = (val: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(val);
+    return `৳${Number(val || 0).toLocaleString()}`;
   };
 
   if (isLoading) {
@@ -125,11 +120,11 @@ export default function EcommerceAnalyticsPage() {
               <div>
                 <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Gross Sales</span>
                 <h3 className="text-xl font-black text-foreground mt-1">
-                  {totals.totalRevenue !== undefined ? formatMoney(totals.totalRevenue) : "$116,188"}
+                  {totals.totalRevenue !== undefined ? formatMoney(totals.totalRevenue) : "৳116,188"}
                 </h3>
               </div>
               <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400">
-                <DollarSign size={16} />
+                <TbCurrencyTaka size={16} />
               </div>
             </div>
             <div className="flex items-center gap-1 text-[10px] mt-3">
@@ -144,7 +139,7 @@ export default function EcommerceAnalyticsPage() {
             <div className="flex justify-between items-start">
               <div>
                 <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Avg. Order Value</span>
-                <h3 className="text-xl font-black text-foreground mt-1">$84.50</h3>
+                <h3 className="text-xl font-black text-foreground mt-1">৳84.50</h3>
               </div>
               <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-indigo-500/10 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-400">
                 <ShoppingCart size={16} />
@@ -187,7 +182,7 @@ export default function EcommerceAnalyticsPage() {
               </div>
             </div>
             <div className="flex items-center gap-1 text-[10px] mt-3">
-              <span className="text-muted-foreground font-bold">$16,000 remaining</span>
+              <span className="text-muted-foreground font-bold">৳16,000 remaining</span>
               <span className="text-muted-foreground font-medium">to target</span>
             </div>
           </div>
@@ -299,7 +294,7 @@ export default function EcommerceAnalyticsPage() {
                           {p.stock} left
                         </span>
                       </td>
-                      <td className="py-3 px-2 text-right font-black text-foreground">${p.revenue.toLocaleString()}</td>
+                      <td className="py-3 px-2 text-right font-black text-foreground">৳{p.revenue.toLocaleString()}</td>
                     </tr>
                   ))}
                 </tbody>

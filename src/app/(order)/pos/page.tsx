@@ -11,29 +11,19 @@ import {
   User,
   Package,
   Layers,
-  Sparkles,
   Receipt,
   Store,
   Clock,
-  ChevronDown,
-  ChevronUp,
-  Percent,
-  Banknote,
   Check,
-  RotateCcw,
   SlidersHorizontal,
-  ArrowRight,
-  ShieldCheck,
-  Printer,
   History,
-  X,
-  ExternalLink,
-  DollarSign,
-  Tag,
+  X, 
   Truck,
   Bookmark,
   RefreshCw,
+  ShieldCheck,
 } from "lucide-react";
+import { TbCurrencyTaka } from "react-icons/tb";
 import Link from "next/link";
 import { useGetAllProductsQuery } from "@/redux/features/product/productApi";
 import { useCreateAdminOrderMutation } from "@/redux/features/order/orderApi";
@@ -42,6 +32,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Badge } from "@/components/ui/badge";
 import InvoiceSlideOver from "@/components/ui/commerce/invoices/InvoiceSlideOver";
 import VariantConfigModal from "@/components/ui/commerce/pos/VariantConfigModal";
+import { useAppSelector } from "@/redux/hooks";
 
 interface CartItem {
   product: any;
@@ -53,6 +44,8 @@ interface CartItem {
 }
 
 export default function POSPage() {
+  const currentUser = useAppSelector((state) => state.auth);
+
   // Product Search & Filter State
   const [productSearch, setProductSearch] = useState("");
   const [filterType, setFilterType] = useState<"all" | "in_stock" | "low_stock" | "variants">("all");
@@ -66,7 +59,7 @@ export default function POSPage() {
   const [heldOrders, setHeldOrders] = useState<{ id: string; time: string; items: CartItem[]; customer: string }[]>([]);
 
   // Customer Details
-  const [customerMode, setCustomerMode] = useState<"walkin" | "custom">("walkin");
+  const [customerMode, setCustomerMode] = useState<"walkin" | "custom">("custom");
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -411,6 +404,14 @@ export default function POSPage() {
       deliveryType,
       notes: orderNotes,
       source: "pos",
+      channel: "pos",
+      createdBy: {
+        name: currentUser?.name || "POS Cashier",
+        email: currentUser?.email || "cashier@store.local",
+        role: currentUser?.role || "admin",
+        id: currentUser?.id || undefined,
+      },
+      cashierName: currentUser?.name || "POS Cashier",
     };
 
     try {
@@ -468,6 +469,12 @@ export default function POSPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            {/* Cashier Badge */}
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-muted/80 border border-border text-xs font-bold text-foreground shadow-xs">
+              <User size={13} className="text-primary" />
+              <span>Cashier: <strong className="text-primary">{currentUser?.name || "Admin Cashier"}</strong></span>
+            </div>
+
             {heldOrders.length > 0 && (
               <div className="flex items-center gap-1 bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 rounded-xl">
                 <Bookmark size={14} className="text-amber-500" />
@@ -1123,7 +1130,7 @@ export default function POSPage() {
                   <div className="p-2.5 rounded-xl bg-background border border-border space-y-1.5 animate-fadeIn">
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-[11px] font-bold text-muted-foreground flex items-center gap-1">
-                        <Banknote size={13} className="text-emerald-500" /> Cash Tendered:
+                        <TbCurrencyTaka size={14} className="text-emerald-500" /> Cash Tendered:
                       </span>
                       <input
                         type="number"

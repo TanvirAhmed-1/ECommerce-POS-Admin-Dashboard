@@ -190,7 +190,7 @@ export default function ChartsPage() {
                 <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-primary" /> Subscriptions</span>
                 <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500" /> One-time POS</span>
               </div>
-              <span className="text-muted-foreground">USD Margin</span>
+              <span className="text-muted-foreground">BDT Margin</span>
             </div>
           </div>
 
@@ -245,13 +245,13 @@ export default function ChartsPage() {
             <div className="w-full h-[180px] relative my-4 border-l border-b border-border/60">
               {/* Render Bubbles */}
               {[
-                { x: 20, y: 140, label: "Gaming Mouse ($50)", size: 14 },
-                { x: 50, y: 110, label: "Keyboard ($90)", size: 18 },
-                { x: 80, y: 80, label: "Desk Pad ($35)", size: 10 },
-                { x: 140, y: 40, label: "Monitor ($499)", size: 28 },
-                { x: 220, y: 90, label: "Headphones ($150)", size: 22 },
-                { x: 300, y: 60, label: "Laptop Pro ($1499)", size: 32 },
-                { x: 400, y: 120, label: "USB Hub ($25)", size: 8 },
+                { x: 20, y: 140, label: "Gaming Mouse (৳50)", size: 14 },
+                { x: 50, y: 110, label: "Keyboard (৳90)", size: 18 },
+                { x: 80, y: 80, label: "Desk Pad (৳35)", size: 10 },
+                { x: 140, y: 40, label: "Monitor (৳499)", size: 28 },
+                { x: 220, y: 90, label: "Headphones (৳150)", size: 22 },
+                { x: 300, y: 60, label: "Laptop Pro (৳1499)", size: 32 },
+                { x: 400, y: 120, label: "USB Hub (৳25)", size: 8 },
               ].map((bubble, idx) => (
                 <div
                   key={idx}

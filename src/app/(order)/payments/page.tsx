@@ -18,7 +18,6 @@ import {
   Trash2,
   ChevronDown,
   CreditCard,
-  DollarSign,
   Clock,
   CheckCircle,
   X,

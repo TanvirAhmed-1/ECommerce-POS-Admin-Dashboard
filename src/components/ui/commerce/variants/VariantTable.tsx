@@ -156,7 +156,7 @@ export default function VariantTable({
                     <TableCell className="p-4 font-bold text-foreground">
                       {isEditing ? (
                         <div className="relative w-24">
-                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground">৳</span>
                           <input
                             type="number"
                             value={editPrice}
@@ -165,7 +165,7 @@ export default function VariantTable({
                           />
                         </div>
                       ) : (
-                        <span>${Number(item.price).toFixed(2)}</span>
+                        <span>৳{Number(item.price).toFixed(2)}</span>
                       )}
                     </TableCell>
                     <TableCell className="p-4 text-center">

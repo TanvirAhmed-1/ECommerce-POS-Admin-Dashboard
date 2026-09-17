@@ -1,5 +1,4 @@
 import {
-  DollarSign,
   Percent,
   Package as PackageIcon,
   TrendingUp,
@@ -8,6 +7,7 @@ import {
   Store,
   Calculator,
 } from "lucide-react";
+import { TbCurrencyTaka } from "react-icons/tb";
 
 interface PricingTabProps {
   purchasePrice: number | "";
@@ -67,7 +67,7 @@ export default function PricingTab({
     <div className="glass-card p-5 sm:p-6 rounded-2xl border border-border space-y-6 animate-fade-in">
       <div className="flex items-center justify-between pb-3 border-b border-border/50">
         <h3 className="text-sm font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
-          <DollarSign size={16} className="text-primary" />
+          <TbCurrencyTaka size={16} className="text-primary" />
           Pricing Matrix & Profit Management
         </h3>
         <span className="text-[10px] text-muted-foreground font-semibold px-2.5 py-1 rounded-full bg-muted/60">

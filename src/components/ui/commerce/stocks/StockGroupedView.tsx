@@ -334,7 +334,7 @@ export default function StockGroupedView({
                               {isEditing ? (
                                 <div className="relative w-24">
                                   <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground">
-                                    $
+                                    ৳
                                   </span>
                                   <input
                                     type="number"
@@ -348,7 +348,7 @@ export default function StockGroupedView({
                                   />
                                 </div>
                               ) : (
-                                <span>${Number(variant.price).toFixed(2)}</span>
+                                <span>৳{Number(variant.price).toFixed(2)}</span>
                               )}
                             </td>
 

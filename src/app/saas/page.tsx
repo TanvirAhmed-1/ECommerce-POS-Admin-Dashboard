@@ -5,7 +5,6 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 import {
   TrendingUp,
   TrendingDown,
-  DollarSign,
   Activity,
   Layers,
   Sparkles,
@@ -16,6 +15,7 @@ import {
   ArrowUpRight,
   ShieldCheck,
 } from "lucide-react";
+import { TbCurrencyTaka } from "react-icons/tb";
 
 export default function SaaSAnalyticsPage() {
   return (
@@ -47,10 +47,10 @@ export default function SaaSAnalyticsPage() {
             <div className="flex justify-between items-start">
               <div>
                 <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Monthly Recurring Revenue (MRR)</span>
-                <h3 className="text-xl font-black text-foreground mt-1">$18,240</h3>
+                <h3 className="text-xl font-black text-foreground mt-1">৳18,240</h3>
               </div>
               <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-indigo-500/10 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-400">
-                <DollarSign size={16} />
+                <TbCurrencyTaka size={16} />
               </div>
             </div>
             <div className="flex items-center gap-1 text-[10px] mt-3">
@@ -65,7 +65,7 @@ export default function SaaSAnalyticsPage() {
             <div className="flex justify-between items-start">
               <div>
                 <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Annual Recurring Revenue (ARR)</span>
-                <h3 className="text-xl font-black text-foreground mt-1">$218,880</h3>
+                <h3 className="text-xl font-black text-foreground mt-1">৳218,880</h3>
               </div>
               <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400">
                 <RefreshCw size={16} />
@@ -171,9 +171,9 @@ export default function SaaSAnalyticsPage() {
 
             <div className="space-y-4 my-6">
               {[
-                { name: "Starter Tier ($19/mo)", value: 45, count: "1,281 subscribers", color: "bg-indigo-500" },
-                { name: "Professional Tier ($49/mo)", value: 40, count: "1,138 subscribers", color: "bg-emerald-500" },
-                { name: "Enterprise Tier ($299/mo)", value: 15, count: "428 subscribers", color: "bg-amber-500" },
+                { name: "Starter Tier (৳19/mo)", value: 45, count: "1,281 subscribers", color: "bg-indigo-500" },
+                { name: "Professional Tier (৳49/mo)", value: 40, count: "1,138 subscribers", color: "bg-emerald-500" },
+                { name: "Enterprise Tier (৳299/mo)", value: 15, count: "428 subscribers", color: "bg-amber-500" },
               ].map((tier, idx) => (
                 <div key={idx} className="space-y-1.5">
                   <div className="flex justify-between text-xs font-bold text-foreground">

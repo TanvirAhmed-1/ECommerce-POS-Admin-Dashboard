@@ -5,7 +5,6 @@ import {
   AlertTriangle,
   XCircle,
   TrendingUp,
-  DollarSign,
 } from "lucide-react";
 
 interface StockStatsCardsProps {
@@ -47,7 +46,7 @@ export default function StockStatsCards({
           </div>
           <div className="flex items-center gap-1 text-[11px] text-emerald-500 font-semibold mt-1">
             <TrendingUp size={12} />
-            <span>Valuation: ${totalValuation.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            <span>Valuation: ৳{totalValuation.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
         </div>
         <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center border border-primary/20 shrink-0 group-hover:scale-110 transition-transform">

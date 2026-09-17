@@ -204,7 +204,7 @@ export default function StockFlatTable({
                       {isEditing ? (
                         <div className="relative w-24">
                           <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground">
-                            $
+                            ৳
                           </span>
                           <input
                             type="number"
@@ -218,7 +218,7 @@ export default function StockFlatTable({
                           />
                         </div>
                       ) : (
-                        <span>${Number(item.price).toFixed(2)}</span>
+                        <span>৳{Number(item.price).toFixed(2)}</span>
                       )}
                     </TableCell>
 

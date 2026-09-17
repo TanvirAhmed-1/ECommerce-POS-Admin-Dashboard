@@ -25,7 +25,7 @@ export default function CRMPage() {
       id: "ACT-01",
       user: "Emma Wilson",
       email: "emma@example.com",
-      action: "Placed a cash-on-delivery order worth $299",
+      action: "Placed a cash-on-delivery order worth ৳299",
       time: "2 mins ago",
       type: "purchase",
     },
@@ -117,7 +117,7 @@ export default function CRMPage() {
             <div className="flex justify-between items-start">
               <div>
                 <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Customer Lifetime Value (LTV)</span>
-                <h3 className="text-xl font-black text-foreground mt-1">$480.00</h3>
+                <h3 className="text-xl font-black text-foreground mt-1">৳480.00</h3>
               </div>
               <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400">
                 <Heart size={16} />
@@ -135,7 +135,7 @@ export default function CRMPage() {
             <div className="flex justify-between items-start">
               <div>
                 <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Acquisition Cost (CAC)</span>
-                <h3 className="text-xl font-black text-foreground mt-1">$18.20</h3>
+                <h3 className="text-xl font-black text-foreground mt-1">৳18.20</h3>
               </div>
               <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-rose-500/10 text-rose-600 dark:bg-rose-500/15 dark:text-rose-400">
                 <ShieldAlert size={16} />

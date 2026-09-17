@@ -259,7 +259,7 @@ export default function ThemeColorsForm({
               <div className="grid grid-cols-2 gap-2">
                 <div className="p-2.5 rounded-lg border border-border bg-card">
                   <p className="text-[9px] uppercase font-bold text-muted-foreground">Today's Sales</p>
-                  <p className="text-sm font-black text-foreground mt-0.5">$3,480.00</p>
+                  <p className="text-sm font-black text-foreground mt-0.5">৳3,480.00</p>
                   <span className="text-[8px] font-bold text-emerald-500">+18.4%</span>
                 </div>
                 <div className="p-2.5 rounded-lg border border-border bg-card">

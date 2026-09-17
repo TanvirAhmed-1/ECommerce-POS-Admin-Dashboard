@@ -139,29 +139,29 @@ export default function InvoiceSlideOver({
             <div className="w-64 space-y-2 text-xs border-t border-border/70 pt-4">
               <div className="flex justify-between text-muted-foreground font-medium">
                 <span>Subtotal</span>
-                <span className="font-mono font-bold text-foreground">${selectedInvoice.subtotal?.toFixed(2)}</span>
+                <span className="font-mono font-bold text-foreground">৳{selectedInvoice.subtotal?.toFixed(2)}</span>
               </div>
               {selectedInvoice.discount > 0 && (
                 <div className="flex justify-between text-rose-500 font-medium">
                   <span>Discount</span>
-                  <span className="font-mono font-bold">-${selectedInvoice.discount?.toFixed(2)}</span>
+                  <span className="font-mono font-bold">-৳{selectedInvoice.discount?.toFixed(2)}</span>
                 </div>
               )}
               {selectedInvoice.vat > 0 && (
                 <div className="flex justify-between text-muted-foreground font-medium">
                   <span>VAT</span>
-                  <span className="font-mono font-bold text-foreground">${selectedInvoice.vat?.toFixed(2)}</span>
+                  <span className="font-mono font-bold text-foreground">৳{selectedInvoice.vat?.toFixed(2)}</span>
                 </div>
               )}
               {selectedInvoice.deliveryCharge > 0 && (
                 <div className="flex justify-between text-muted-foreground font-medium">
                   <span>Delivery</span>
-                  <span className="font-mono font-bold text-foreground">${selectedInvoice.deliveryCharge?.toFixed(2)}</span>
+                  <span className="font-mono font-bold text-foreground">৳{selectedInvoice.deliveryCharge?.toFixed(2)}</span>
                 </div>
               )}
               <div className="flex justify-between border-t border-border/60 pt-2 text-sm font-black text-foreground">
                 <span>Total</span>
-                <span className="font-mono text-primary text-base">${selectedInvoice.totalAmount?.toFixed(2)}</span>
+                <span className="font-mono text-primary text-base">৳{selectedInvoice.totalAmount?.toFixed(2)}</span>
               </div>
             </div>
           </div>

@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState } from "react";
 import {
   Search,
@@ -14,6 +12,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Filter,
+  Store,
+  Globe,
+  UserCheck,
 } from "lucide-react";
 import {
   Table,
@@ -61,6 +62,7 @@ export default function TransactionsLedgerTable({
 }: TransactionsLedgerTableProps) {
   const [deleteTransaction, { isLoading: isDeleting }] = useDeleteTransactionMutation();
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [channelFilter, setChannelFilter] = useState<"all" | "web" | "pos" | "expense">("all");
 
   const totalPages = Math.ceil(totalCount / limit) || 1;
 
@@ -76,31 +78,102 @@ export default function TransactionsLedgerTable({
     }
   };
 
+  // Helper to determine channel for transaction
+  const getTransactionChannel = (tx: any): "pos" | "web" | "expense" => {
+    if (tx.type === "expense") return "expense";
+    if (
+      tx.source === "pos" ||
+      tx.channel === "pos" ||
+      tx.reference?.toLowerCase().includes("pos") ||
+      tx.category?.toLowerCase().includes("pos") ||
+      tx.title?.toLowerCase().includes("pos")
+    ) {
+      return "pos";
+    }
+    return "web";
+  };
+
+  // Client-side channel filtering if user selects channel tab
+  const filteredTransactions = transactions.filter((tx) => {
+    if (channelFilter === "all") return true;
+    if (channelFilter === "expense") return tx.type === "expense";
+    const channel = getTransactionChannel(tx);
+    return channel === channelFilter;
+  });
+
   return (
     <div className="space-y-4">
-      {/* Search & Filter Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-card p-3 rounded-2xl border border-border">
-        {/* Search */}
-        <div className="relative flex-1 max-w-sm">
-          <Search
-            size={14}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-          />
-          <input
-            type="text"
-            placeholder="Search by title, reference, account..."
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setPage(1);
-            }}
-            className="w-full pl-8 pr-3 py-1.5 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-primary text-foreground"
-          />
+      {/* Search, Channel Tabs & Filters Bar */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-card p-3 rounded-2xl border border-border">
+        {/* Left: Search & Channel Tabs */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 flex-1">
+          {/* Search */}
+          <div className="relative flex-1 max-w-sm">
+            <Search
+              size={14}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+            />
+            <input
+              type="text"
+              placeholder="Search by title, reference, account, cashier..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setPage(1);
+              }}
+              className="w-full pl-8 pr-3 py-1.5 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-primary text-foreground"
+            />
+          </div>
+
+          {/* Quick Channel Pills */}
+          <div className="flex items-center gap-1 bg-muted/60 p-0.5 rounded-xl text-[11px] overflow-x-auto">
+            <button
+              onClick={() => setChannelFilter("all")}
+              className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer whitespace-nowrap ${
+                channelFilter === "all"
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              All Records
+            </button>
+            <button
+              onClick={() => setChannelFilter("pos")}
+              className={`px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 transition-all cursor-pointer whitespace-nowrap ${
+                channelFilter === "pos"
+                  ? "bg-emerald-500 text-white shadow-sm"
+                  : "text-muted-foreground hover:text-emerald-500"
+              }`}
+            >
+              <Store size={12} />
+              <span>POS Sales</span>
+            </button>
+            <button
+              onClick={() => setChannelFilter("web")}
+              className={`px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 transition-all cursor-pointer whitespace-nowrap ${
+                channelFilter === "web"
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "text-muted-foreground hover:text-blue-500"
+              }`}
+            >
+              <Globe size={12} />
+              <span>Web E-Commerce</span>
+            </button>
+            <button
+              onClick={() => setChannelFilter("expense")}
+              className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer whitespace-nowrap ${
+                channelFilter === "expense"
+                  ? "bg-rose-500 text-white shadow-sm"
+                  : "text-muted-foreground hover:text-rose-500"
+              }`}
+            >
+              Expenses
+            </button>
+          </div>
         </div>
 
-        {/* Filters */}
-        <div className="flex items-center gap-2 overflow-x-auto">
-          {/* Type Filter */}
+        {/* Right: Type Dropdown */}
+        <div className="flex items-center gap-2 self-end lg:self-auto">
           <select
             value={typeFilter}
             onChange={(e) => {
@@ -113,26 +186,6 @@ export default function TransactionsLedgerTable({
             <option value="expense">Expenses Only (খরচ)</option>
             <option value="income">Income Only (আয়)</option>
           </select>
-
-          {/* Type Filter Chips */}
-          <div className="flex items-center gap-1 bg-muted/60 p-0.5 rounded-xl text-[10px]">
-            {["all", "expense", "income"].map((t) => (
-              <button
-                key={t}
-                onClick={() => {
-                  setTypeFilter(t);
-                  setPage(1);
-                }}
-                className={`px-2.5 py-1 rounded-lg font-bold capitalize transition-all cursor-pointer ${
-                  typeFilter === t
-                    ? "bg-card text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {t === "all" ? "All" : t}
-              </button>
-            ))}
-          </div>
         </div>
       </div>
 
@@ -143,6 +196,9 @@ export default function TransactionsLedgerTable({
             <TableRow className="border-border">
               <TableHead className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                 Date & Reference
+              </TableHead>
+              <TableHead className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                Channel / Origin
               </TableHead>
               <TableHead className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                 Description / Title
@@ -164,21 +220,23 @@ export default function TransactionsLedgerTable({
           <TableBody className="divide-y divide-border/60">
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-32 text-center">
+                <TableCell colSpan={7} className="h-32 text-center">
                   <div className="flex justify-center">
                     <Spinner className="w-6 h-6 text-primary" />
                   </div>
                 </TableCell>
               </TableRow>
-            ) : transactions.length === 0 ? (
+            ) : filteredTransactions.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-32 text-center text-xs text-muted-foreground">
-                  No accounting transaction records found.
+                <TableCell colSpan={7} className="h-32 text-center text-xs text-muted-foreground">
+                  No accounting transaction records match the current filter.
                 </TableCell>
               </TableRow>
             ) : (
-              transactions.map((tx) => {
+              filteredTransactions.map((tx) => {
                 const isExpense = tx.type === "expense";
+                const channel = getTransactionChannel(tx);
+                const cashierName = tx.cashierName || tx.createdBy?.name || tx.staffName;
 
                 return (
                   <TableRow key={tx._id} className="hover:bg-muted/30 transition-colors">
@@ -192,11 +250,47 @@ export default function TransactionsLedgerTable({
                           })}
                         </p>
                         {tx.reference && (
-                          <span className="text-[10px] font-mono text-muted-foreground">
+                          <span className="text-[10px] font-mono text-muted-foreground block">
                             {tx.reference}
                           </span>
                         )}
                       </div>
+                    </TableCell>
+
+                    {/* Channel / Origin Badge */}
+                    <TableCell className="py-3">
+                      {isExpense ? (
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] font-bold bg-rose-500/10 text-rose-500 border-rose-500/20 py-0.5 px-2"
+                        >
+                          💸 Expense
+                        </Badge>
+                      ) : channel === "pos" ? (
+                        <div className="space-y-1">
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/25 py-0.5 px-2 flex items-center gap-1 w-fit"
+                          >
+                            <Store size={10} />
+                            <span>POS In-Store</span>
+                          </Badge>
+                          {cashierName && (
+                            <span className="text-[9px] font-bold text-muted-foreground flex items-center gap-1">
+                              <UserCheck size={9} className="text-emerald-500" />
+                              {cashierName}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/25 py-0.5 px-2 flex items-center gap-1 w-fit"
+                        >
+                          <Globe size={10} />
+                          <span>Web Store</span>
+                        </Badge>
+                      )}
                     </TableCell>
 
                     <TableCell className="py-3">
@@ -205,10 +299,16 @@ export default function TransactionsLedgerTable({
                           className={`p-1.5 rounded-lg shrink-0 ${
                             isExpense
                               ? "bg-rose-500/10 text-rose-500"
-                              : "bg-emerald-500/10 text-emerald-500"
+                              : channel === "pos"
+                              ? "bg-emerald-500/10 text-emerald-500"
+                              : "bg-blue-500/10 text-blue-500"
                           }`}
                         >
-                          {isExpense ? <TrendingDown size={14} /> : <TrendingUp size={14} />}
+                          {isExpense ? (
+                            <TrendingDown size={14} />
+                          ) : (
+                            <TrendingUp size={14} />
+                          )}
                         </div>
                         <div>
                           <p className="text-xs font-bold text-foreground">{tx.title}</p>
@@ -265,7 +365,7 @@ export default function TransactionsLedgerTable({
         {/* Pagination Bar */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-muted/20 text-xs text-muted-foreground">
           <span>
-            Total <strong>{totalCount}</strong> transactions
+            Showing <strong>{filteredTransactions.length}</strong> of <strong>{totalCount}</strong> transactions
           </span>
           <div className="flex items-center gap-2">
             <span>

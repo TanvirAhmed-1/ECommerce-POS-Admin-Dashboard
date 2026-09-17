@@ -10,6 +10,7 @@ import {
   ShoppingBag,
   Truck,
   Phone,
+  PhoneCall,
   Mail,
   MapPin,
   CreditCard,
@@ -19,6 +20,11 @@ import {
   ExternalLink,
   ShieldCheck,
   AlertCircle,
+  Store,
+  Globe,
+  UserCheck,
+  User,
+  Edit3,
 } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import Link from "next/link";
@@ -28,6 +34,7 @@ interface OrderDetailsModalProps {
   onClose: () => void;
   onUpdateStatus: (orderId: string, newStatus: string) => Promise<void>;
   isUpdatingStatus: boolean;
+  onOpenEdit?: (order: any) => void;
 }
 
 export default function OrderDetailsModal({
@@ -35,6 +42,7 @@ export default function OrderDetailsModal({
   onClose,
   onUpdateStatus,
   isUpdatingStatus,
+  onOpenEdit,
 }: OrderDetailsModalProps) {
   if (!order) return null;
 
@@ -197,13 +205,27 @@ export default function OrderDetailsModal({
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer transition-all"
-            title="Close modal"
-          >
-            <X size={18} />
-          </button>
+          <div className="flex items-center gap-2">
+            {onOpenEdit && (
+              <button
+                type="button"
+                onClick={() => onOpenEdit(order)}
+                className="px-3 py-1.5 bg-primary/10 hover:bg-primary text-primary hover:text-white rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 border border-primary/20 shadow-xs"
+                title="Edit address, change variants, adjust delivery fee or add products"
+              >
+                <Edit3 size={13} />
+                <span>Modify & Confirm Order (পরিবর্তন)</span>
+              </button>
+            )}
+
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer transition-all"
+              title="Close modal"
+            >
+              <X size={18} />
+            </button>
+          </div>
         </div>
 
         {/* Scrollable Content */}
@@ -381,50 +403,122 @@ export default function OrderDetailsModal({
             </div>
           </div>
 
-          {/* Customer & Shipping Summary Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Customer Info */}
+          {/* Customer, Origin, Delivery & Tele-Call Confirmation Summary Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* 1. Order Channel & Creator Log */}
+            <div className="p-4 rounded-xl border border-border bg-card space-y-2.5">
+              <h5 className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+                {order.source === "pos" || order.channel === "pos" ? (
+                  <Store size={13} className="text-emerald-500" />
+                ) : (
+                  <Globe size={13} className="text-blue-500" />
+                )}
+                Order Origin & Log
+              </h5>
+              <div className="space-y-1.5 text-xs">
+                <div>
+                  <span className="text-[10px] text-muted-foreground uppercase font-bold block">Sales Channel:</span>
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-black uppercase mt-0.5 bg-muted text-foreground border border-border">
+                    {order.source === "pos" || order.channel === "pos" ? "🏪 POS Outlet / Counter" : "🌐 Web Online Store"}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-muted-foreground uppercase font-bold block">Handled / Created By:</span>
+                  <p className="font-bold text-foreground flex items-center gap-1 mt-0.5">
+                    <UserCheck size={12} className="text-primary shrink-0" />
+                    <span>{order.createdBy?.name || order.cashierName || (order.source === "pos" ? "Store Cashier" : "Online Checkout Customer")}</span>
+                  </p>
+                  {order.createdBy?.email && (
+                    <p className="text-[10px] text-muted-foreground font-mono">{order.createdBy.email}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* 2. Customer & Contact */}
             <div className="p-4 rounded-xl border border-border bg-card space-y-2.5">
               <h5 className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
                 <Phone size={13} className="text-primary" />
                 Customer & Contact
               </h5>
-              <div className="space-y-1 text-xs">
+              <div className="space-y-1.5 text-xs">
                 <p className="font-bold text-foreground">{fullName}</p>
-                <p className="text-muted-foreground flex items-center gap-1.5 text-[11px]">
-                  <Phone size={11} /> {phone}
-                </p>
+                <a
+                  href={`tel:${phone}`}
+                  className="text-primary hover:underline flex items-center gap-1.5 text-[11px] font-mono font-bold"
+                  title="Direct Call Customer"
+                >
+                  <PhoneCall size={11} className="text-emerald-500" /> {phone}
+                </a>
+                {order.alternativePhone && (
+                  <p className="text-muted-foreground text-[10px] font-mono">
+                    Alt: {order.alternativePhone}
+                  </p>
+                )}
                 <p className="text-muted-foreground flex items-center gap-1.5 text-[11px]">
                   <Mail size={11} /> {email}
                 </p>
               </div>
             </div>
 
-            {/* Delivery & Payment Info */}
+            {/* 3. Delivery & Courier */}
             <div className="p-4 rounded-xl border border-border bg-card space-y-2.5">
               <h5 className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
                 <MapPin size={13} className="text-primary" />
-                Shipping & Payment
+                Shipping & Courier
               </h5>
               <div className="space-y-1 text-xs">
                 <p className="text-muted-foreground text-[11px] leading-relaxed">
                   <span className="font-semibold text-foreground">Address:</span> {address}
                   {city ? `, ${city}` : ""}
                 </p>
-                <div className="flex items-center gap-2 pt-1 flex-wrap">
+                <div className="flex items-center gap-1.5 pt-1 flex-wrap">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+                    🚚 {order.courier || "Steadfast Courier"}
+                  </span>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-muted text-foreground border border-border uppercase">
                     {order.payment?.method || "COD"}
                   </span>
-                  <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded ${
-                      order.payment?.status === "paid"
-                        ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
-                        : "bg-amber-500/15 text-amber-600 dark:text-amber-400"
-                    }`}
-                  >
-                    Payment: {order.payment?.status || "Pending"}
+                </div>
+                {order.notes && (
+                  <p className="text-[10px] text-muted-foreground italic pt-0.5">
+                    Note: {order.notes}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* 4. Tele-Call Confirmation CRM */}
+            <div className="p-4 rounded-xl border border-border bg-card space-y-2.5">
+              <h5 className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+                <PhoneCall size={13} className="text-primary" />
+                Phone Confirmation
+              </h5>
+              <div className="space-y-1.5 text-xs">
+                <div>
+                  <span className="text-[10px] text-muted-foreground uppercase font-bold block">Call Status:</span>
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-black uppercase mt-0.5 ${
+                    order.callStatus === "confirmed"
+                      ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                      : order.callStatus === "no_answer"
+                      ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+                      : order.callStatus === "call_later"
+                      ? "bg-orange-500/15 text-orange-600 dark:text-orange-400 border border-orange-500/20"
+                      : order.callStatus === "cancelled"
+                      ? "bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/20"
+                      : "bg-muted text-muted-foreground border border-border"
+                  }`}>
+                    {order.callStatus === "confirmed" ? "🟢 Confirmed" : order.callStatus === "no_answer" ? "🟡 No Answer" : order.callStatus === "call_later" ? "🟠 Call Later" : order.callStatus === "cancelled" ? "🔴 Cancelled" : "📞 Unconfirmed"}
                   </span>
                 </div>
+                <div className="text-[10px] text-muted-foreground">
+                  <span>Call Attempts: <strong>{order.callAttempts || 0}</strong></span>
+                </div>
+                {order.callLogs && order.callLogs.length > 0 && (
+                  <p className="text-[10px] text-muted-foreground italic line-clamp-2">
+                    Latest: "{order.callLogs[order.callLogs.length - 1].note || "No note recorded"}"
+                  </p>
+                )}
               </div>
             </div>
           </div>

@@ -18,7 +18,6 @@ import {
   Trash2,
   ChevronDown,
   ShoppingBag,
-  DollarSign,
   Clock,
   CheckCircle,
   X,
@@ -30,16 +29,21 @@ import {
   XCircle,
   Truck,
   Package,
-  Plus,
   Receipt,
   Calendar,
   Filter,
   RotateCcw,
   RefreshCw,
   Store,
+  Globe,
+  Tag,
+  Pencil,
+  PhoneCall,
 } from "lucide-react";
+import { TbCurrencyTaka } from "react-icons/tb";
 import OrderDetailsModal from "@/components/ui/commerce/orders/OrderDetailsModal";
 import CreateOrderModal from "@/components/ui/commerce/orders/CreateOrderModal";
+import EditOrderModal from "@/components/ui/commerce/orders/EditOrderModal";
 import InvoiceSlideOver from "@/components/ui/commerce/invoices/InvoiceSlideOver";
 
 type DatePreset = "all" | "today" | "yesterday" | "week" | "month" | "last_month" | "year" | "custom";
@@ -254,10 +258,11 @@ const mockOrders = [
 
 export default function OrdersPage() {
   const [activeTab, setActiveTab] = useState<"All" | "Pending" | "Processing" | "Shipped" | "Delivered" | "Cancelled">("All");
+  const [channelFilter, setChannelFilter] = useState<"all" | "web" | "pos">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
-  const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
   const [confirmModalOrder, setConfirmModalOrder] = useState<any | null>(null);
+  const [editingOrder, setEditingOrder] = useState<any | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; orderNumber: string } | null>(null);
   const [isCreateOrderOpen, setIsCreateOrderOpen] = useState(false);
   const [activeInvoiceForPreview, setActiveInvoiceForPreview] = useState<any | null>(null);
@@ -305,10 +310,10 @@ export default function OrdersPage() {
     return () => clearTimeout(handler);
   }, [searchQuery]);
 
-  // Reset page when tab, debounced search query, or date range changes
+  // Reset page when tab, channel, debounced search query, or date range changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [activeTab, debouncedSearchQuery, startDate, endDate]);
+  }, [activeTab, channelFilter, debouncedSearchQuery, startDate, endDate]);
 
   // Backend paginated query with date filtering
   const { data: ordersRes, isLoading, isFetching, refetch } = useGetAllOrdersQuery({
@@ -346,30 +351,39 @@ export default function OrdersPage() {
 
   // Final filtered & paginated orders to display
   const displayedOrders = useMemo(() => {
-    if (!isMock) {
-      return orders;
-    }
+    const baseList = isMock
+      ? mockOrders.map((ord: any, idx: number) => ({
+          ...ord,
+          id: ord.id || `ORD-${ord._id.slice(-6).toUpperCase()}`
+        }))
+      : orders;
 
-    // Client-side simulation for mock data when DB is empty
-    const filtered = mockOrders.map((ord: any, idx: number) => ({
-      ...ord,
-      id: ord.id || `ORD-${ord._id.slice(-6).toUpperCase()}`
-    })).filter((ord: any) => {
+    const filtered = baseList.filter((ord: any) => {
+      // Channel Filter (POS vs Web)
+      const isPos = ord.source === "pos" || ord.channel === "pos";
+      if (channelFilter === "pos" && !isPos) return false;
+      if (channelFilter === "web" && isPos) return false;
+
+      // Status Tab Filter
       const matchesTab =
         activeTab === "All" ||
         ord.orderStatus?.toLowerCase() === activeTab.toLowerCase();
 
-      const userName = ord.shippingAddress?.fullName || ord.user?.name || "";
-      const userEmail = ord.user?.email || "";
-      const userPhone = ord.shippingAddress?.phone || ord.user?.phone || "";
+      // Search Query
+      const userName = ord.shippingAddress?.fullName || ord.customerInfo?.fullName || ord.user?.name || "";
+      const userEmail = ord.user?.email || ord.customerInfo?.email || "";
+      const userPhone = ord.shippingAddress?.phone || ord.customerInfo?.phone || ord.user?.phone || "";
       const visualId = ord.id || "";
+      const cashier = ord.createdBy?.name || ord.cashierName || "";
 
       const matchesSearch =
         visualId.toLowerCase().includes(searchQuery.toLowerCase()) ||
         userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         userEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        cashier.toLowerCase().includes(searchQuery.toLowerCase()) ||
         userPhone.includes(searchQuery);
 
+      // Date Range
       let matchesDate = true;
       if (startDate || endDate) {
         const ordTime = new Date(ord.createdAt).getTime();
@@ -387,23 +401,13 @@ export default function OrdersPage() {
     });
 
     return filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-  }, [orders, isMock, activeTab, searchQuery, startDate, endDate, currentPage, itemsPerPage]);
+  }, [orders, isMock, activeTab, channelFilter, searchQuery, startDate, endDate, currentPage, itemsPerPage]);
 
-  // Global Statistics (using aggregated metadata from backend, or client-side mock values)
+  // Global Statistics with Channel Breakdown
   const stats = useMemo(() => {
-    if (!isMock && ordersRes?.data?.meta?.stats) {
-      const s = ordersRes.data.meta.stats;
-      return {
-        total: s.totalOrders || 0,
-        pending: s.pendingOrders || 0,
-        processing: s.processingOrders || 0,
-        completed: s.totalOrders - s.pendingOrders - s.processingOrders, // estimation
-        revenue: s.totalSales || 0,
-      };
-    }
+    const baseList = isMock ? mockOrders : orders;
 
-    // Client-side fallback for mock data
-    const filteredForStats = mockOrders.filter((ord: any) => {
+    const filteredForStats = baseList.filter((ord: any) => {
       if (startDate || endDate) {
         const ordTime = new Date(ord.createdAt).getTime();
         if (startDate && ordTime < new Date(`${startDate}T00:00:00`).getTime()) return false;
@@ -413,15 +417,30 @@ export default function OrdersPage() {
     });
 
     const total = filteredForStats.length;
-    const pending = filteredForStats.filter((o) => o.orderStatus === "pending").length;
-    const processing = filteredForStats.filter((o) => o.orderStatus === "processing").length;
-    const completed = filteredForStats.filter((o) => o.orderStatus === "delivered").length;
+    const pending = filteredForStats.filter((o: any) => o.orderStatus === "pending").length;
+    const processing = filteredForStats.filter((o: any) => o.orderStatus === "processing").length;
+    const completed = filteredForStats.filter((o: any) => o.orderStatus === "delivered").length;
     const revenue = filteredForStats
-      .filter((o) => o.orderStatus === "delivered" || o.payment?.status === "paid")
-      .reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+      .filter((o: any) => o.orderStatus === "delivered" || o.payment?.status === "paid" || o.paymentStatus === "paid")
+      .reduce((sum: number, o: any) => sum + (o.totalAmount || 0), 0);
 
-    return { total, pending, processing, completed, revenue };
-  }, [ordersRes, isMock, startDate, endDate]);
+    const posOrders = filteredForStats.filter((o: any) => o.source === "pos" || o.channel === "pos");
+    const webOrders = filteredForStats.filter((o: any) => o.source !== "pos" && o.channel !== "pos");
+    const posRevenue = posOrders.reduce((sum: number, o: any) => sum + (o.totalAmount || 0), 0);
+    const webRevenue = webOrders.reduce((sum: number, o: any) => sum + (o.totalAmount || 0), 0);
+
+    return {
+      total,
+      pending,
+      processing,
+      completed,
+      revenue,
+      posCount: posOrders.length,
+      webCount: webOrders.length,
+      posRevenue,
+      webRevenue,
+    };
+  }, [orders, isMock, startDate, endDate]);
 
   // Pagination totals
   const totalPages = useMemo(() => {
@@ -573,31 +592,6 @@ export default function OrdersPage() {
     }
   };
 
-  // Update status handler
-  const handleStatusChange = async (status: string) => {
-    if (!selectedOrder) return;
-    const isMock = selectedOrder._id.startsWith("mock");
-
-    const toastId = toast.loading("Updating order status...");
-    try {
-      if (isMock) {
-        // Mock Update
-        const updated = { ...selectedOrder, orderStatus: status };
-        setSelectedOrder(updated);
-        toast.success(`Mock status updated to ${status}`, { id: toastId });
-        return;
-      }
-
-      await updateOrderStatus({ id: selectedOrder._id, status }).unwrap();
-      setSelectedOrder((prev: any) => (prev ? { ...prev, orderStatus: status } : null));
-      toast.success(`Order status successfully updated to ${status}!`, { id: toastId });
-      refetch();
-    } catch (err: any) {
-      console.error(err);
-      toast.error(err?.data?.message || err?.message || "Failed to update order status.", { id: toastId });
-    }
-  };
-
   // Direct modal order status change
   const handleModalStatusChange = async (orderId: string, status: string) => {
     const isMock = orderId.startsWith("mock");
@@ -605,49 +599,17 @@ export default function OrdersPage() {
     try {
       if (isMock) {
         setConfirmModalOrder((prev: any) => (prev ? { ...prev, orderStatus: status } : null));
-        setSelectedOrder((prev: any) => (prev && prev._id === orderId ? { ...prev, orderStatus: status } : prev));
         toast.success(`Mock status updated to ${status}`, { id: toastId });
         return;
       }
 
       await updateOrderStatus({ id: orderId, status }).unwrap();
       setConfirmModalOrder((prev: any) => (prev ? { ...prev, orderStatus: status } : null));
-      setSelectedOrder((prev: any) => (prev && prev._id === orderId ? { ...prev, orderStatus: status } : prev));
       toast.success(`Order successfully marked as ${status}!`, { id: toastId });
       refetch();
     } catch (err: any) {
       console.error(err);
       toast.error(err?.data?.message || err?.message || "Failed to update status.", { id: toastId });
-    }
-  };
-
-  // Update payment status handler
-  const handlePaymentStatusChange = async (paymentStatus: string) => {
-    if (!selectedOrder) return;
-    const isMock = selectedOrder._id.startsWith("mock");
-
-    const toastId = toast.loading("Updating payment status...");
-    try {
-      if (isMock) {
-        const updated = {
-          ...selectedOrder,
-          payment: { ...selectedOrder.payment, status: paymentStatus }
-        };
-        setSelectedOrder(updated);
-        toast.success(`Mock payment status updated to ${paymentStatus}`, { id: toastId });
-        return;
-      }
-
-      await updateOrderStatus({ id: selectedOrder._id, paymentStatus }).unwrap();
-      setSelectedOrder((prev: any) => (prev ? {
-        ...prev,
-        payment: { ...(prev.payment || {}), status: paymentStatus }
-      } : null));
-      toast.success(`Payment status successfully updated to ${paymentStatus}!`, { id: toastId });
-      refetch();
-    } catch (err: any) {
-      console.error(err);
-      toast.error(err?.data?.message || err?.message || "Failed to update payment status.", { id: toastId });
     }
   };
 
@@ -764,7 +726,7 @@ export default function OrdersPage() {
         </div>
 
 
-        {/* Stats Blocks */}
+        {/* Stats Blocks with Channel breakdown */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="glass-card p-4 rounded-2xl border border-border bg-card flex items-center gap-4 shadow-sm">
             <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
@@ -777,32 +739,38 @@ export default function OrdersPage() {
           </div>
 
           <div className="glass-card p-4 rounded-2xl border border-border bg-card flex items-center gap-4 shadow-sm">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
-              <Clock size={20} />
-            </div>
-            <div>
-              <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Pending Orders</p>
-              <h3 className="text-lg font-black text-foreground">{stats.pending}</h3>
-            </div>
-          </div>
-
-          <div className="glass-card p-4 rounded-2xl border border-border bg-card flex items-center gap-4 shadow-sm">
             <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center shrink-0">
-              <Truck size={20} />
+              <Globe size={20} />
             </div>
             <div>
-              <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Processing</p>
-              <h3 className="text-lg font-black text-foreground">{stats.processing}</h3>
+              <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Web Store Sales</p>
+              <div className="flex items-baseline gap-1.5">
+                <h3 className="text-lg font-black text-foreground">৳{stats.webRevenue.toLocaleString()}</h3>
+                <span className="text-[10px] text-muted-foreground font-semibold">({stats.webCount} ord)</span>
+              </div>
             </div>
           </div>
 
           <div className="glass-card p-4 rounded-2xl border border-border bg-card flex items-center gap-4 shadow-sm">
             <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
-              <DollarSign size={20} />
+              <Store size={20} />
             </div>
             <div>
-              <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Total Sales</p>
-              <h3 className="text-lg font-black text-foreground">${stats.revenue.toLocaleString()}</h3>
+              <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">POS Counter Sales</p>
+              <div className="flex items-baseline gap-1.5">
+                <h3 className="text-lg font-black text-foreground">৳{stats.posRevenue.toLocaleString()}</h3>
+                <span className="text-[10px] text-muted-foreground font-semibold">({stats.posCount} ord)</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="glass-card p-4 rounded-2xl border border-border bg-card flex items-center gap-4 shadow-sm">
+            <div className="w-10 h-10 rounded-xl bg-violet-500/10 text-violet-600 flex items-center justify-center shrink-0">
+              <TbCurrencyTaka size={20} />
+            </div>
+            <div>
+              <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Total Revenue</p>
+              <h3 className="text-lg font-black text-foreground">৳{stats.revenue.toLocaleString()}</h3>
             </div>
           </div>
         </div>
@@ -903,28 +871,52 @@ export default function OrdersPage() {
           </div>
         </div>
 
-        {/* Tab Selection & Search bar */}
+        {/* Tab Selection, Channel Filter & Search bar */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div className="flex bg-muted/80 p-0.5 rounded-lg border border-border self-start overflow-x-auto max-w-full">
-            {(["All", "Pending", "Processing", "Shipped", "Delivered", "Cancelled"] as const).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`px-3 py-1 text-xs font-semibold rounded-md cursor-pointer transition-all shrink-0 ${activeTab === tab
-                  ? "bg-white text-black dark:bg-zinc-800 dark:text-white shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Status Tabs */}
+            <div className="flex bg-muted/80 p-0.5 rounded-lg border border-border self-start overflow-x-auto max-w-full">
+              {(["All", "Pending", "Processing", "Shipped", "Delivered", "Cancelled"] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-3 py-1 text-xs font-semibold rounded-md cursor-pointer transition-all shrink-0 ${activeTab === tab
+                    ? "bg-white text-black dark:bg-zinc-800 dark:text-white shadow-sm font-bold"
+                    : "text-muted-foreground hover:text-foreground"
+                    }`}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
+
+            {/* Channel Filter (Web vs POS) */}
+            <div className="flex bg-muted/80 p-0.5 rounded-lg border border-border self-start overflow-x-auto">
+              {[
+                { key: "all", label: "All Channels", icon: <Tag size={11} /> },
+                { key: "web", label: `🌐 Web Store (${stats.webCount})`, icon: <Globe size={11} /> },
+                { key: "pos", label: `🏪 POS Sales (${stats.posCount})`, icon: <Store size={11} /> },
+              ].map((ch) => (
+                <button
+                  key={ch.key}
+                  onClick={() => setChannelFilter(ch.key as any)}
+                  className={`px-2.5 py-1 text-xs font-semibold rounded-md cursor-pointer transition-all shrink-0 flex items-center gap-1 ${
+                    channelFilter === ch.key
+                      ? "bg-primary text-white shadow-sm font-bold"
+                      : "text-muted-foreground hover:text-foreground"
                   }`}
-              >
-                {tab}
-              </button>
-            ))}
+                >
+                  <span>{ch.label}</span>
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="flex items-center h-10 w-full lg:max-w-md rounded-lg px-3 gap-2 border border-border bg-card transition-all focus-within:border-zinc-400 dark:focus-within:border-zinc-700">
             <Search className="text-muted-foreground" size={16} />
             <input
               type="text"
-              placeholder="Search by ID, name, email, or phone..."
+              placeholder="Search by ID, customer, cashier, email, or phone..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="flex-1 outline-none text-xs bg-transparent border-none font-medium text-foreground placeholder:text-muted-foreground"
@@ -1005,12 +997,63 @@ export default function OrdersPage() {
                         {/* Visual ID */}
                         <td className="p-4 font-bold text-foreground">{ord.id}</td>
 
-                        {/* Customer Info */}
+                        {/* Customer Info & Origin */}
                         <td className="p-4">
                           <div className="flex flex-col min-w-0">
                             <span className="font-semibold text-foreground truncate">{fullName}</span>
                             <span className="text-[10px] text-muted-foreground truncate">{email}</span>
-                            <span className="text-[9px] text-muted-foreground/80 font-mono mt-0.5">{phone}</span>
+                            <a
+                              href={`tel:${phone}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-[10px] text-primary hover:underline font-mono font-bold mt-0.5 flex items-center gap-1 w-fit"
+                              title="Click to dial customer"
+                            >
+                              <PhoneCall size={9} className="text-emerald-500" />
+                              {phone}
+                            </a>
+
+                            {/* Creator / Channel & Call Status Badges */}
+                            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                              {ord.source === "pos" || ord.channel === "pos" ? (
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                                  <Store size={9} /> POS Sale
+                                  <span className="opacity-70 font-normal">
+                                    • {ord.createdBy?.name || ord.cashierName || "Staff"}
+                                  </span>
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                                  <Globe size={9} /> Web Store
+                                </span>
+                              )}
+
+                              {/* Call Confirmation Status Pill */}
+                              {ord.callStatus && (
+                                <span
+                                  className={`inline-flex items-center px-1.5 py-0.2 rounded text-[8px] font-extrabold uppercase ${
+                                    ord.callStatus === "confirmed"
+                                      ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                                      : ord.callStatus === "no_answer"
+                                      ? "bg-amber-500/15 text-amber-600 border border-amber-500/20"
+                                      : ord.callStatus === "call_later"
+                                      ? "bg-orange-500/15 text-orange-600 border border-orange-500/20"
+                                      : ord.callStatus === "cancelled"
+                                      ? "bg-rose-500/15 text-rose-600 border border-rose-500/20"
+                                      : "bg-muted text-muted-foreground"
+                                  }`}
+                                >
+                                  {ord.callStatus === "confirmed"
+                                    ? "✓ Confirmed"
+                                    : ord.callStatus === "no_answer"
+                                    ? "No Ans"
+                                    : ord.callStatus === "call_later"
+                                    ? "Call Later"
+                                    : ord.callStatus === "cancelled"
+                                    ? "Cancelled"
+                                    : ord.callStatus}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </td>
 
@@ -1073,7 +1116,7 @@ export default function OrdersPage() {
 
                         {/* Total Bill */}
                         <td className="p-4 text-right font-black text-foreground">
-                          ${Number(ord.totalAmount || 0).toFixed(2)}
+                          ৳{Number(ord.totalAmount || 0).toFixed(2)}
                         </td>
 
                         {/* Status Badge */}
@@ -1082,27 +1125,31 @@ export default function OrdersPage() {
                         {/* Actions */}
                         <td className="p-4" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-center gap-1.5">
+                            {/* Edit & Modify Order (Customer Call Confirmation & Variant/Address Change) */}
+                            <button
+                              onClick={() => setEditingOrder(ord)}
+                              className="p-2 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-600 hover:text-white transition-all cursor-pointer border border-indigo-500/20 hover:scale-105 active:scale-95 shadow-xs"
+                              title="Edit / Modify Order (Call Confirmation & Address/Variant Change)"
+                            >
+                              <Pencil size={14} />
+                            </button>
+
+                            {/* Stock Inspection & Order Details */}
                             <button
                               onClick={() => setConfirmModalOrder(ord)}
-                              className="px-2.5 py-1 text-[10px] font-bold rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all flex items-center gap-1 cursor-pointer border border-primary/20"
-                              title="Inspect Variant Stock & Confirm Order"
+                              className="p-2 rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all cursor-pointer border border-primary/20 hover:scale-105 active:scale-95 shadow-xs"
+                              title="Inspect Variant Stock & Order Details"
                             >
-                              <Eye size={12} />
-                              <span>Details & Stock</span>
+                              <Eye size={14} />
                             </button>
-                            <button
-                              onClick={() => setSelectedOrder(ord)}
-                              className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md cursor-pointer transition-colors"
-                              title="View Invoice Drawer"
-                            >
-                              <Sliders size={13} />
-                            </button>
+
+                            {/* Delete Order */}
                             <button
                               onClick={(e) => handleDeleteClick(ord._id, ord.id, e)}
-                              className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md cursor-pointer transition-colors"
+                              className="p-2 rounded-lg bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all cursor-pointer border border-rose-500/20 hover:scale-105 active:scale-95 shadow-xs"
                               title="Delete Order"
                             >
-                              <Trash2 size={13} />
+                              <Trash2 size={14} />
                             </button>
                           </div>
                         </td>
@@ -1198,241 +1245,6 @@ export default function OrdersPage() {
           )}
         </div>
 
-        {/* Slide-over Drawer: Order details */}
-        {selectedOrder && (
-          <div className="fixed inset-0 z-40 overflow-hidden flex justify-end animate-fade-in">
-            {/* Drawer Backdrop */}
-            <div
-              className="absolute inset-0 bg-black/50 backdrop-blur-xs transition-opacity cursor-pointer"
-              onClick={() => setSelectedOrder(null)}
-            />
-
-            {/* Slide-over Card panel */}
-            <div className="relative w-full max-w-lg bg-background border-l border-border h-full flex flex-col shadow-2xl z-10 animate-slide-in">
-
-              {/* Drawer Header */}
-              <div className="p-5 border-b border-border flex items-center justify-between bg-muted/20">
-                <div className="space-y-0.5">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-mono font-bold text-primary">{selectedOrder.id}</span>
-                    {getStatusBadge(selectedOrder.orderStatus || "pending")}
-                  </div>
-                  <h3 className="font-heading text-lg font-black text-foreground">Order Invoicing Details</h3>
-                </div>
-                <button
-                  onClick={() => setSelectedOrder(null)}
-                  className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg cursor-pointer transition-colors"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              {/* Drawer Body Scroll */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar text-xs">
-
-                {/* Status Update Block */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="p-4 rounded-xl border border-primary/15 bg-primary/5 dark:bg-primary/10 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <label className="text-[10px] font-bold text-primary uppercase tracking-wider flex items-center gap-1.5">
-                        <Sliders size={12} />
-                        Order Status
-                      </label>
-                    </div>
-                    <div className="relative">
-                      <select
-                        value={selectedOrder.orderStatus}
-                        onChange={(e) => handleStatusChange(e.target.value)}
-                        disabled={isUpdating}
-                        className="w-full h-10 px-3 rounded-lg border border-border bg-card text-xs font-bold text-foreground outline-none focus:border-primary transition-all cursor-pointer"
-                      >
-                        <option value="pending">Pending</option>
-                        <option value="processing">Processing</option>
-                        <option value="shipped">Shipped</option>
-                        <option value="delivered">Delivered</option>
-                        <option value="cancelled">Cancelled</option>
-                      </select>
-                    </div>
-                    <p className="text-[9px] text-muted-foreground leading-normal">
-                      Manages shipment progress status and variant stock reserve holds.
-                    </p>
-                  </div>
-
-                  <div className="p-4 rounded-xl border border-emerald-500/15 bg-emerald-500/5 dark:bg-emerald-500/10 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <label className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
-                        <CreditCard size={12} />
-                        Payment Status
-                      </label>
-                    </div>
-                    <div className="relative">
-                      <select
-                        value={selectedOrder.payment?.status || "pending"}
-                        onChange={(e) => handlePaymentStatusChange(e.target.value)}
-                        disabled={isUpdating}
-                        className="w-full h-10 px-3 rounded-lg border border-border bg-card text-xs font-bold text-foreground outline-none focus:border-emerald-500 transition-all cursor-pointer"
-                      >
-                        <option value="pending">Pending</option>
-                        <option value="paid">Paid</option>
-                        <option value="failed">Failed</option>
-                        <option value="cancelled">Cancelled</option>
-                      </select>
-                    </div>
-                    <p className="text-[9px] text-muted-foreground leading-normal">
-                      Update order payment records and sync invoicing files.
-                    </p>
-                  </div>
-                </div>
-
-                {/* Customer Contact & Address Card */}
-                <div className="space-y-3">
-                  <h4 className="font-bold text-foreground flex items-center gap-2 border-b border-border/60 pb-1.5">
-                    <User size={14} className="text-primary" />
-                    Customer Contact & Shipping
-                  </h4>
-                  <div className="glass-card rounded-xl border border-border p-4 space-y-3 bg-muted/10">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 text-primary font-black text-xs flex items-center justify-center shrink-0">
-                        {selectedOrder.shippingAddress?.fullName?.substring(0, 2).toUpperCase() || "GC"}
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h5 className="font-bold text-foreground text-sm">
-                            {selectedOrder.shippingAddress?.fullName || selectedOrder.user?.name || "Guest Customer"}
-                          </h5>
-                        </div>
-                        <p className="text-[10px] text-muted-foreground">Registered Buyer Account</p>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t border-border/40">
-                      <div className="flex items-center gap-2">
-                        <Mail size={12} className="text-muted-foreground shrink-0" />
-                        <span className="font-medium text-foreground truncate">{selectedOrder.user?.email || "N/A"}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Phone size={12} className="text-muted-foreground shrink-0" />
-                        <span className="font-medium text-foreground">{selectedOrder.shippingAddress?.phone || selectedOrder.user?.phone || "N/A"}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-2 pt-2 border-t border-border/40">
-                      <MapPin size={12} className="text-muted-foreground shrink-0 mt-0.5" />
-                      <div className="space-y-0.5">
-                        <p className="font-medium text-foreground leading-normal">
-                          {selectedOrder.shippingAddress?.address || "N/A"}
-                        </p>
-                        <p className="font-bold text-primary">
-                          City: {selectedOrder.shippingAddress?.city || "N/A"}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Order Summary list */}
-                <div className="space-y-3">
-                  <h4 className="font-bold text-foreground flex items-center gap-2 border-b border-border/60 pb-1.5">
-                    <Package size={14} className="text-primary" />
-                    Purchased Package Line Items ({selectedOrder.items?.length || 0})
-                  </h4>
-                  <div className="divide-y divide-border border border-border rounded-xl bg-card overflow-hidden">
-                    {selectedOrder.items?.map((item: any, i: number) => {
-                      const itemTitle = item.product?.name || "Product Item";
-                      const itemPrice = item.price || 0;
-                      const itemQty = item.quantity || 1;
-                      const itemTotal = itemPrice * itemQty;
-                      const varDetails = [];
-                      if (item.variant?.color) varDetails.push(`Color: ${item.variant.color}`);
-                      if (item.variant?.size) varDetails.push(`Size: ${item.variant.size}`);
-
-                      return (
-                        <div key={i} className="p-3.5 flex items-start justify-between gap-4">
-                          <div className="space-y-0.5 min-w-0">
-                            <span className="font-bold text-foreground block truncate hover:underline cursor-pointer">
-                              {itemTitle}
-                            </span>
-                            {varDetails.length > 0 && (
-                              <span className="text-[10px] text-muted-foreground block font-medium">
-                                {varDetails.join(" | ")}
-                              </span>
-                            )}
-                            <span className="text-[10px] text-primary font-bold">
-                              ${itemPrice.toFixed(2)} &times; {itemQty}
-                            </span>
-                          </div>
-                          <span className="font-black text-foreground shrink-0">
-                            ${itemTotal.toFixed(2)}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Billing Summary Box */}
-                <div className="space-y-3">
-                  <h4 className="font-bold text-foreground flex items-center gap-2 border-b border-border/60 pb-1.5">
-                    <CreditCard size={14} className="text-primary" />
-                    Billing & Payment Information
-                  </h4>
-                  <div className="glass-card rounded-xl border border-border p-4 bg-muted/5 space-y-3">
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <span className="text-muted-foreground font-bold uppercase text-[9px] tracking-wider block">Payment Gateway</span>
-                        <span className="font-black text-foreground text-xs uppercase block">
-                          {selectedOrder.payment?.method === "cod" ? "Cash On Delivery" : selectedOrder.payment?.method}
-                        </span>
-                      </div>
-                      <div className="space-y-1">
-                        <span className="text-muted-foreground font-bold uppercase text-[9px] tracking-wider block">Gateway Status</span>
-                        <div>{getPaymentBadge(selectedOrder.payment?.status || "pending")}</div>
-                      </div>
-                    </div>
-
-                    {selectedOrder.payment?.transactionId && (
-                      <div className="p-2.5 rounded bg-card border border-border font-mono text-[10px] space-y-0.5">
-                        <span className="text-muted-foreground block text-[9px] font-bold">Transaction Reference ID</span>
-                        <span className="text-foreground font-extrabold">{selectedOrder.payment.transactionId}</span>
-                      </div>
-                    )}
-
-                    <div className="space-y-2 pt-2 border-t border-border/40 font-medium text-muted-foreground">
-                      <div className="flex justify-between items-center text-foreground font-black text-sm pt-1.5">
-                        <span>Total Checkout Charge</span>
-                        <span>${Number(selectedOrder.totalAmount || 0).toFixed(2)}</span>
-                      </div>
-                    </div>
-
-                  </div>
-                </div>
-
-              </div>
-
-              {/* Drawer Footer controls */}
-              <div className="p-4 border-t border-border flex items-center gap-3 bg-muted/20">
-                <button
-                  type="button"
-                  onClick={() => setSelectedOrder(null)}
-                  className="flex-1 h-10 border border-border bg-card text-foreground hover:bg-muted text-xs font-bold rounded-lg cursor-pointer transition-colors"
-                >
-                  Close Invoice
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => handleDeleteClick(selectedOrder._id, selectedOrder.id, e)}
-                  className="px-4 h-10 bg-destructive/10 text-destructive hover:bg-destructive hover:text-white border border-destructive/20 text-xs font-bold rounded-lg cursor-pointer transition-colors flex items-center justify-center gap-1.5"
-                  title="Permanently Delete Order"
-                >
-                  <Trash2 size={14} />
-                  <span>Delete Order</span>
-                </button>
-              </div>
-
-            </div>
-          </div>
-        )}
 
         {/* Delete Confirmation Modal */}
         {deleteTarget && (
@@ -1486,6 +1298,21 @@ export default function OrdersPage() {
           onClose={() => setConfirmModalOrder(null)}
           onUpdateStatus={handleModalStatusChange}
           isUpdatingStatus={isUpdating}
+          onOpenEdit={(ord) => {
+            setConfirmModalOrder(null);
+            setEditingOrder(ord);
+          }}
+        />
+
+        {/* Edit & Modify Order Modal (Customer Phone Confirmation) */}
+        <EditOrderModal
+          isOpen={!!editingOrder}
+          order={editingOrder}
+          onClose={() => setEditingOrder(null)}
+          onOrderUpdated={(updated) => {
+            refetch();
+            setEditingOrder(null);
+          }}
         />
 
         {/* Create POS Order / Quick Sale Modal */}

@@ -21,9 +21,9 @@ import {
   Info,
   Image as ImageIcon,
   Sliders,
-  DollarSign,
   Globe,
 } from "lucide-react";
+import { TbCurrencyTaka } from "react-icons/tb";
 
 import GeneralTab from "@/components/ui/commerce/products/create/GeneralTab";
 import MediaTab from "@/components/ui/commerce/products/create/MediaTab";
@@ -637,7 +637,7 @@ function ProductFormContent() {
         {[
           { key: "general", label: "1. Info & Relations", icon: <Info size={14} /> },
           { key: "media", label: "2. Product Media", icon: <ImageIcon size={14} /> },
-          { key: "pricing", label: "3. Pricing & Inventory", icon: <DollarSign size={14} /> },
+          { key: "pricing", label: "3. Pricing & Inventory", icon: <TbCurrencyTaka size={14} /> },
           { key: "seo", label: "4. SEO Configurations", icon: <Globe size={14} /> },
           { key: "variants", label: "5. Specifications & Variants", icon: <Sliders size={14} /> },
         ].map((tab) => (

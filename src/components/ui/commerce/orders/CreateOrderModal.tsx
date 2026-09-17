@@ -9,36 +9,22 @@ import {
   Trash2,
   ShoppingBag,
   User,
-  Phone,
-  Mail,
-  MapPin,
-  CreditCard,
-  CheckCircle2,
-  AlertCircle,
   Package,
   Layers,
-  Sparkles,
   Receipt,
-  Tag,
   Truck,
   Store,
   Clock,
-  ChevronDown,
-  ChevronUp,
-  Percent,
-  Banknote,
   Check,
-  RotateCcw,
   SlidersHorizontal,
-  ArrowRight,
   ShieldCheck,
 } from "lucide-react";
 import { useGetAllProductsQuery } from "@/redux/features/product/productApi";
 import { useCreateAdminOrderMutation } from "@/redux/features/order/orderApi";
 import { toast } from "react-hot-toast";
 import { Spinner } from "@/components/ui/spinner";
-import { Badge } from "@/components/ui/badge";
 import VariantConfigModal from "@/components/ui/commerce/pos/VariantConfigModal";
+import { useAppSelector } from "@/redux/hooks";
 
 interface CreateOrderModalProps {
   isOpen: boolean;
@@ -60,6 +46,8 @@ export default function CreateOrderModal({
   onClose,
   onOrderCreated,
 }: CreateOrderModalProps) {
+  const currentUser = useAppSelector((state) => state.auth);
+
   // Product Search & Filter State
   const [productSearch, setProductSearch] = useState("");
   const [filterType, setFilterType] = useState<"all" | "in_stock" | "low_stock" | "variants">("all");
@@ -71,7 +59,7 @@ export default function CreateOrderModal({
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
 
   // Customer Details
-  const [customerMode, setCustomerMode] = useState<"walkin" | "custom">("walkin");
+  const [customerMode, setCustomerMode] = useState<"walkin" | "custom">("custom");
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -365,6 +353,14 @@ export default function CreateOrderModal({
       deliveryType,
       notes: orderNotes,
       source: "pos",
+      channel: "pos",
+      createdBy: {
+        name: currentUser?.name || "Admin Staff",
+        email: currentUser?.email || "admin@store.local",
+        role: currentUser?.role || "admin",
+        id: currentUser?.id || undefined,
+      },
+      cashierName: currentUser?.name || "Admin Staff",
     };
 
     try {
