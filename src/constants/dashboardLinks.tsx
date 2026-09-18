@@ -144,6 +144,11 @@ export const zenithDashboardLinks: SidebarGroup[] = [
         icon: <Images size={18} />,
       },
       {
+        title: "Promotional Banner",
+        route: "/cms/promotional-banner",
+        icon: <Sparkles size={18} />,
+      },
+      {
         title: "Pages",
         route: "/cms/pages",
         icon: <Layers size={18} />,
