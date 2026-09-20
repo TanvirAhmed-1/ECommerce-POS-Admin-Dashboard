@@ -1,7 +1,9 @@
+"use client";
+
 import React, { useState, useEffect } from "react";
 import { useCreateCategoryMutation, useUpdateCategoryMutation } from "@/redux/features/category/categoryApi";
 import { useUploadSingleImageMutation } from "@/redux/features/upload/uploadApi";
-import { FolderTree, Info, Save, X, UploadCloud } from "lucide-react";
+import { FolderTree, Info, Save, X, UploadCloud, Image as ImageIcon, FileText } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "react-hot-toast";
 
@@ -30,9 +32,19 @@ export default function CategoryForm({
   const [categoryName, setCategoryName] = useState<string>("");
   const [categorySlug, setCategorySlug] = useState<string>("");
   const [categoryTitle, setCategoryTitle] = useState<string>("");
+  const [categorySubtitle, setCategorySubtitle] = useState<string>("");
+  const [categoryDescription, setCategoryDescription] = useState<string>("");
+  
+  // Category Thumbnail Image
   const [categoryImage, setCategoryImage] = useState<string>("");
   const [imageUploadMode, setImageUploadMode] = useState<"upload" | "url">("upload");
   const [isDraggingImage, setIsDraggingImage] = useState<boolean>(false);
+
+  // Category Hero Banner Image
+  const [categoryBanner, setCategoryBanner] = useState<string>("");
+  const [bannerUploadMode, setBannerUploadMode] = useState<"upload" | "url">("upload");
+  const [isDraggingBanner, setIsDraggingBanner] = useState<boolean>(false);
+
   const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState<boolean>(false);
   const [isActive, setIsActive] = useState<boolean>(true);
   const [isFeatured, setIsFeatured] = useState<boolean>(false);
@@ -46,9 +58,27 @@ export default function CategoryForm({
       .toString()
       .toLowerCase()
       .trim()
-      .replace(/\s+/g, "-")          // Replace spaces with -
-      .replace(/[^\w\-]+/g, "")       // Remove all non-word chars
-      .replace(/\-\-+/g, "-");        // Replace multiple - with single -
+      .replace(/\s+/g, "-")
+      .replace(/[^\w\-]+/g, "")
+      .replace(/\-\-+/g, "-");
+  };
+
+  const resetForm = () => {
+    setCategoryName("");
+    setCategorySlug("");
+    setParentCategory("");
+    setIsActive(true);
+    setShowInFooter(false);
+    setShowInNavbar(false);
+    setCategoryTitle("");
+    setCategorySubtitle("");
+    setCategoryDescription("");
+    setCategoryImage("");
+    setCategoryBanner("");
+    setIsFeatured(false);
+    setIsSlugManuallyEdited(false);
+    setIsDraggingImage(false);
+    setIsDraggingBanner(false);
   };
 
   useEffect(() => {
@@ -60,7 +90,10 @@ export default function CategoryForm({
       setShowInFooter(activeCategory.showInFooter ?? false);
       setShowInNavbar(activeCategory.showInNavbar ?? false);
       setCategoryTitle(activeCategory.title || "");
+      setCategorySubtitle(activeCategory.subtitle || "");
+      setCategoryDescription(activeCategory.description || "");
       setCategoryImage(activeCategory.image || "");
+      setCategoryBanner(activeCategory.banner || "");
       setIsFeatured(activeCategory.isFeatured ?? false);
       setIsSlugManuallyEdited(true);
     } else if (formMode === "sub" && activeCategory) {
@@ -71,20 +104,14 @@ export default function CategoryForm({
       setShowInFooter(false);
       setShowInNavbar(false);
       setCategoryTitle("");
+      setCategorySubtitle("");
+      setCategoryDescription("");
       setCategoryImage("");
+      setCategoryBanner("");
       setIsFeatured(false);
       setIsSlugManuallyEdited(false);
     } else {
-      setCategoryName("");
-      setCategorySlug("");
-      setParentCategory("");
-      setIsActive(true);
-      setShowInFooter(false);
-      setShowInNavbar(false);
-      setCategoryTitle("");
-      setCategoryImage("");
-      setIsFeatured(false);
-      setIsSlugManuallyEdited(false);
+      resetForm();
     }
   }, [activeCategory, formMode]);
 
@@ -100,28 +127,8 @@ export default function CategoryForm({
     setCategorySlug(val.toLowerCase().replace(/\s+/g, "-"));
   };
 
-  const handleDragOverImage = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDraggingImage(true);
-  };
-
-  const handleDragLeaveImage = () => {
-    setIsDraggingImage(false);
-  };
-
-  const handleDropImage = async (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDraggingImage(false);
-    const file = e.dataTransfer.files?.[0];
-    if (file) await uploadImageFile(file);
-  };
-
-  const handleFileChangeImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) await uploadImageFile(file);
-  };
-
-  const uploadImageFile = async (file: File) => {
+  // Thumbnail Image upload handler
+  const uploadThumbnailFile = async (file: File) => {
     if (!file.type.startsWith("image/")) {
       toast.error("Only image files are allowed!");
       return;
@@ -132,18 +139,45 @@ export default function CategoryForm({
     }
     const formData = new FormData();
     formData.append("image", file);
-    const toastId = toast.loading("Uploading category image...");
+    const toastId = toast.loading("Uploading thumbnail image...");
     try {
       const res = await uploadSingleImage(formData).unwrap();
       if (res?.success && res?.data?.url) {
         setCategoryImage(res.data.url);
-        toast.success("Category image uploaded successfully!", { id: toastId });
+        toast.success("Thumbnail image uploaded successfully!", { id: toastId });
       } else {
         toast.error("Upload failed", { id: toastId });
       }
     } catch (err: any) {
       console.error(err);
       toast.error(err?.data?.message || err?.message || "Failed to upload image", { id: toastId });
+    }
+  };
+
+  // Banner Image upload handler
+  const uploadBannerFile = async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Only image files are allowed!");
+      return;
+    }
+    if (file.size > 3 * 1024 * 1024) {
+      toast.error("Banner size exceeds the 3MB limit!");
+      return;
+    }
+    const formData = new FormData();
+    formData.append("image", file);
+    const toastId = toast.loading("Uploading category banner...");
+    try {
+      const res = await uploadSingleImage(formData).unwrap();
+      if (res?.success && res?.data?.url) {
+        setCategoryBanner(res.data.url);
+        toast.success("Category banner uploaded successfully!", { id: toastId });
+      } else {
+        toast.error("Upload failed", { id: toastId });
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err?.data?.message || err?.message || "Failed to upload banner", { id: toastId });
     }
   };
 
@@ -160,40 +194,42 @@ export default function CategoryForm({
     );
 
     try {
+      const commonData = {
+        name: categoryName.trim(),
+        slug: categorySlug.trim() || undefined,
+        title: categoryTitle.trim() || undefined,
+        subtitle: categorySubtitle.trim() || undefined,
+        description: categoryDescription.trim() || undefined,
+        image: categoryImage.trim() || undefined,
+        banner: categoryBanner.trim() || undefined,
+        isActive,
+        showInFooter,
+        showInNavbar,
+        isFeatured,
+      };
+
       if (formMode === "create" || formMode === "sub") {
         const payload = {
-          name: categoryName,
-          slug: categorySlug.trim() || undefined,
+          ...commonData,
           parentCategory: parentCategory || undefined,
-          isActive,
-          showInFooter,
-          showInNavbar,
-          title: categoryTitle.trim() || undefined,
-          image: categoryImage.trim() || undefined,
-          isFeatured,
         };
 
         const res = await createCategory(payload).unwrap();
         toast.success(`Successfully created "${res?.data?.name || categoryName}"!`, { id: toastId });
+        resetForm();
         onSaveSuccess();
       } else if (formMode === "update" && activeCategory) {
         const payload = {
           id: activeCategory._id,
           data: {
-            name: categoryName,
-            slug: categorySlug.trim() || undefined,
+            ...commonData,
             parentId: parentCategory || null,
-            isActive,
-            showInFooter,
-            showInNavbar,
-            title: categoryTitle.trim() || undefined,
-            image: categoryImage.trim() || undefined,
-            isFeatured,
           },
         };
 
         const res = await updateCategory(payload).unwrap();
         toast.success(`Successfully updated "${res?.data?.name || categoryName}"!`, { id: toastId });
+        resetForm();
         onSaveSuccess();
       }
     } catch (err: any) {
@@ -206,8 +242,8 @@ export default function CategoryForm({
   };
 
   return (
-    <div className="glass-card p-5 rounded-2xl border border-border sticky top-20">
-      <div className="flex items-center gap-2 mb-4">
+    <div className="glass-card p-5 rounded-2xl border border-border sticky top-20 max-h-[calc(100vh-100px)] overflow-y-auto custom-scrollbar">
+      <div className="flex items-center gap-2 mb-4 pb-3 border-b border-border/50">
         <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
           <FolderTree size={16} />
         </div>
@@ -218,7 +254,7 @@ export default function CategoryForm({
             {formMode === "update" && "Update Category"}
           </h4>
           <p className="text-[11px] text-muted-foreground mt-0.5">
-            {formMode === "create" && "Establish a new root category node"}
+            {formMode === "create" && "Establish a new root category node with banner & SEO details"}
             {formMode === "sub" && "Configure child subcategory node"}
             {formMode === "update" && `Modifying settings for active category`}
           </p>
@@ -226,169 +262,44 @@ export default function CategoryForm({
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Category Name */}
+        {/* 1. Category Name */}
         <div className="space-y-1.5">
           <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
-            Category Name
+            Category Name <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
             required
             disabled={isSaving}
-            placeholder="e.g. Shoes, Laptops, Jeans"
+            placeholder="e.g. Plastic Household, Kitchenware, Rice Cookers"
             value={categoryName}
             onChange={(e) => handleNameChange(e.target.value)}
-            className="w-full h-10 px-3 rounded-lg border border-border bg-card text-xs font-medium text-foreground outline-none focus:border-zinc-400 dark:focus:border-zinc-700 transition-all placeholder:text-muted-foreground disabled:opacity-50"
+            className="w-full h-10 px-3 rounded-lg border border-border bg-card text-xs font-semibold text-foreground outline-none focus:border-primary transition-all placeholder:text-muted-foreground disabled:opacity-50"
           />
         </div>
 
-        {/* Category Title */}
-        <div className="space-y-1.5">
-          <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
-            Category Title (Optional)
-          </label>
-          <input
-            type="text"
-            disabled={isSaving}
-            placeholder="e.g. Premium Leather Footwear Collection"
-            value={categoryTitle}
-            onChange={(e) => setCategoryTitle(e.target.value)}
-            className="w-full h-10 px-3 rounded-lg border border-border bg-card text-xs font-medium text-foreground outline-none focus:border-zinc-400 dark:focus:border-zinc-700 transition-all placeholder:text-muted-foreground disabled:opacity-50"
-          />
-        </div>
-
-        {/* Category Image */}
+        {/* 2. Category Slug */}
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
             <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
-              Category Image (Optional)
+              URL Slug
             </label>
-            <div className="flex bg-muted p-0.5 rounded-lg border border-border">
-              <button
-                type="button"
-                onClick={() => setImageUploadMode("upload")}
-                className={`text-[9px] font-bold px-2 py-1 rounded-md transition-all cursor-pointer ${
-                  imageUploadMode === "upload"
-                    ? "bg-card text-foreground shadow-sm"
-                    : "text-muted-foreground"
-                }`}
-              >
-                Upload File
-              </button>
-              <button
-                type="button"
-                onClick={() => setImageUploadMode("url")}
-                className={`text-[9px] font-bold px-2 py-1 rounded-md transition-all cursor-pointer ${
-                  imageUploadMode === "url"
-                    ? "bg-card text-foreground shadow-sm"
-                    : "text-muted-foreground"
-                }`}
-              >
-                Image URL
-              </button>
-            </div>
-          </div>
-
-          {imageUploadMode === "upload" ? (
-            <div
-              onDragOver={handleDragOverImage}
-              onDragLeave={handleDragLeaveImage}
-              onDrop={handleDropImage}
-              className={`border border-dashed rounded-xl p-4 text-center cursor-pointer transition-all ${
-                isDraggingImage
-                  ? "border-primary bg-primary/5"
-                  : "border-border hover:border-zinc-400 dark:hover:border-zinc-700 bg-card"
-              }`}
-              onClick={() => document.getElementById("category-image-file-input-id")?.click()}
-            >
-              <input
-                type="file"
-                id="category-image-file-input-id"
-                className="hidden"
-                accept="image/*"
-                onChange={handleFileChangeImage}
-                disabled={isUploadingImage || isSaving}
-              />
-              {categoryImage ? (
-                <div className="relative w-24 h-24 mx-auto group">
-                  <img
-                    src={categoryImage}
-                    alt="Category Preview"
-                    className="w-full h-full object-cover rounded-lg border border-border"
-                  />
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setCategoryImage("");
-                    }}
-                    className="absolute -top-1.5 -right-1.5 bg-destructive text-white p-1 rounded-full hover:bg-destructive/90 shadow transition-all"
-                  >
-                    <X size={10} />
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-1 text-muted-foreground">
-                  <UploadCloud size={24} className="mx-auto text-muted/50" />
-                  {isUploadingImage ? (
-                    <p className="text-[10px] font-semibold text-primary">Uploading image...</p>
-                  ) : (
-                    <>
-                      <p className="text-[10px] font-bold text-foreground">Drag & drop image file here</p>
-                      <p className="text-[9px]">or click to browse (Max 2MB)</p>
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-1">
-              <input
-                type="text"
-                disabled={isSaving}
-                placeholder="Paste image URL e.g. https://domain.com/image.png"
-                value={categoryImage}
-                onChange={(e) => setCategoryImage(e.target.value)}
-                className="w-full h-10 px-3 rounded-lg border border-border bg-card text-xs font-medium text-foreground outline-none focus:border-zinc-400 dark:focus:border-zinc-700 transition-all placeholder:text-muted-foreground disabled:opacity-50"
-              />
-              {categoryImage && (
-                <div className="mt-2 text-center">
-                  <img
-                    src={categoryImage}
-                    alt="URL Preview"
-                    className="max-h-20 max-w-full mx-auto object-contain rounded-lg border border-border"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = "none";
-                    }}
-                  />
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Category Slug */}
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between">
-            <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
-              Category Slug
-            </label>
-            <span className="text-[9px] text-muted-foreground font-bold">
-              {isSlugManuallyEdited ? "Custom Edit Mode" : "Auto-Generated"}
+            <span className="text-[9px] text-muted-foreground font-semibold">
+              {isSlugManuallyEdited ? "Custom Slug" : "Auto-Generated"}
             </span>
           </div>
           <input
             type="text"
             required
             disabled={isSaving}
-            placeholder="e.g. shoes, laptops, jeans"
+            placeholder="e.g. plastic-household"
             value={categorySlug}
             onChange={(e) => handleSlugChange(e.target.value)}
-            className="w-full h-10 px-3 rounded-lg border border-border bg-card text-xs font-medium text-foreground outline-none focus:border-zinc-400 dark:focus:border-zinc-700 transition-all placeholder:text-muted-foreground disabled:opacity-50"
+            className="w-full h-10 px-3 rounded-lg border border-border bg-card text-xs font-mono font-medium text-foreground outline-none focus:border-primary transition-all placeholder:text-muted-foreground disabled:opacity-50"
           />
         </div>
 
-        {/* Parent Category Selector */}
+        {/* 3. Parent Category Selector */}
         <div className="space-y-1.5">
           <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
             Parent Category
@@ -397,7 +308,7 @@ export default function CategoryForm({
             disabled={formMode === "sub" || isSaving}
             value={parentCategory}
             onChange={(e) => setParentCategory(e.target.value)}
-            className="w-full h-10 px-3 rounded-lg border border-border bg-card text-xs font-medium text-foreground outline-none focus:border-zinc-400 dark:focus:border-zinc-700 transition-all cursor-pointer disabled:opacity-50"
+            className="w-full h-10 px-3 rounded-lg border border-border bg-card text-xs font-medium text-foreground outline-none focus:border-primary transition-all cursor-pointer disabled:opacity-50"
           >
             <option value="">None (Make Root Category)</option>
             {flatCategories
@@ -416,7 +327,138 @@ export default function CategoryForm({
           )}
         </div>
 
-        {/* Checkboxes */}
+        {/* 4. Display Title (H1 Hero Title) */}
+        <div className="space-y-1.5">
+          <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+            <span>Display Title (H1 for Banner)</span>
+          </label>
+          <input
+            type="text"
+            disabled={isSaving}
+            placeholder="e.g. Plastic Household Products"
+            value={categoryTitle}
+            onChange={(e) => setCategoryTitle(e.target.value)}
+            className="w-full h-10 px-3 rounded-lg border border-border bg-card text-xs font-medium text-foreground outline-none focus:border-primary transition-all placeholder:text-muted-foreground disabled:opacity-50"
+          />
+          <p className="text-[9px] text-muted-foreground">Shown as the main heading in category hero banner</p>
+        </div>
+
+        {/* 5. Subtitle / Tagline */}
+        <div className="space-y-1.5">
+          <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+            Subtitle / Tagline
+          </label>
+          <input
+            type="text"
+            disabled={isSaving}
+            placeholder="e.g. Durable and useful plastic products for your everyday home needs. Quality you can trust."
+            value={categorySubtitle}
+            onChange={(e) => setCategorySubtitle(e.target.value)}
+            className="w-full h-10 px-3 rounded-lg border border-border bg-card text-xs font-medium text-foreground outline-none focus:border-primary transition-all placeholder:text-muted-foreground disabled:opacity-50"
+          />
+        </div>
+
+        {/* 6. Thumbnail / Card Image */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+              Category Thumbnail / Icon Image
+            </label>
+            <div className="flex bg-muted p-0.5 rounded-lg border border-border">
+              <button
+                type="button"
+                onClick={() => setImageUploadMode("upload")}
+                className={`text-[9px] font-bold px-2 py-0.5 rounded-md transition-all cursor-pointer ${
+                  imageUploadMode === "upload"
+                    ? "bg-card text-foreground shadow-xs"
+                    : "text-muted-foreground"
+                }`}
+              >
+                Upload File
+              </button>
+              <button
+                type="button"
+                onClick={() => setImageUploadMode("url")}
+                className={`text-[9px] font-bold px-2 py-0.5 rounded-md transition-all cursor-pointer ${
+                  imageUploadMode === "url"
+                    ? "bg-card text-foreground shadow-xs"
+                    : "text-muted-foreground"
+                }`}
+              >
+                Image URL
+              </button>
+            </div>
+          </div>
+
+          {imageUploadMode === "upload" ? (
+            <div
+              onDragOver={(e) => { e.preventDefault(); setIsDraggingImage(true); }}
+              onDragLeave={() => setIsDraggingImage(false)}
+              onDrop={async (e) => {
+                e.preventDefault();
+                setIsDraggingImage(false);
+                const file = e.dataTransfer.files?.[0];
+                if (file) await uploadThumbnailFile(file);
+              }}
+              className={`border border-dashed rounded-xl p-3 text-center cursor-pointer transition-all ${
+                isDraggingImage
+                  ? "border-primary bg-primary/5"
+                  : "border-border hover:border-primary bg-card"
+              }`}
+              onClick={() => document.getElementById("category-image-file-input-id")?.click()}
+            >
+              <input
+                type="file"
+                id="category-image-file-input-id"
+                className="hidden"
+                accept="image/*"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (file) await uploadThumbnailFile(file);
+                }}
+                disabled={isUploadingImage || isSaving}
+              />
+              {categoryImage ? (
+                <div className="relative w-20 h-20 mx-auto group">
+                  <img
+                    src={categoryImage}
+                    alt="Category Preview"
+                    className="w-full h-full object-cover rounded-lg border border-border"
+                  />
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCategoryImage("");
+                    }}
+                    className="absolute -top-1.5 -right-1.5 bg-destructive text-white p-1 rounded-full hover:bg-destructive/90 shadow transition-all cursor-pointer"
+                  >
+                    <X size={10} />
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-1 text-muted-foreground py-1">
+                  <UploadCloud size={20} className="mx-auto text-muted/50" />
+                  <p className="text-[10px] font-bold text-foreground">Upload category icon / thumbnail</p>
+                  <p className="text-[8px]">Max 2MB</p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-1">
+              <input
+                type="text"
+                disabled={isSaving}
+                placeholder="Paste image URL e.g. https://domain.com/image.png"
+                value={categoryImage}
+                onChange={(e) => setCategoryImage(e.target.value)}
+                className="w-full h-9 px-3 rounded-lg border border-border bg-card text-xs font-medium text-foreground outline-none focus:border-primary transition-all placeholder:text-muted-foreground disabled:opacity-50"
+              />
+            </div>
+          )}
+        </div>
+
+        {/* 7. Checkboxes / Visibility */}
         <div className="grid grid-cols-2 gap-2.5 pt-2">
           <label className="flex items-center gap-2 p-2.5 rounded-xl border border-border bg-card cursor-pointer hover:bg-muted/10 transition-all select-none opacity-90">
             <input
@@ -442,21 +484,7 @@ export default function CategoryForm({
             />
             <div className="flex flex-col">
               <span className="text-[10px] font-bold text-foreground leading-tight">Featured</span>
-              <span className="text-[8px] text-muted-foreground">Show in featured</span>
-            </div>
-          </label>
-
-          <label className="flex items-center gap-2 p-2.5 rounded-xl border border-border bg-card cursor-pointer hover:bg-muted/10 transition-all select-none opacity-90">
-            <input
-              type="checkbox"
-              disabled={isSaving}
-              checked={showInFooter}
-              onChange={(e) => setShowInFooter(e.target.checked)}
-              className="rounded border-border text-primary focus:ring-0 cursor-pointer disabled:opacity-50"
-            />
-            <div className="flex flex-col">
-              <span className="text-[10px] font-bold text-foreground leading-tight">Footer</span>
-              <span className="text-[8px] text-muted-foreground">Show in footer</span>
+              <span className="text-[8px] text-muted-foreground">Highlight on home</span>
             </div>
           </label>
 
@@ -469,13 +497,161 @@ export default function CategoryForm({
               className="rounded border-border text-primary focus:ring-0 cursor-pointer disabled:opacity-50"
             />
             <div className="flex flex-col">
-              <span className="text-[10px] font-bold text-foreground leading-tight">Navbar</span>
-              <span className="text-[8px] text-muted-foreground">Show in nav</span>
+              <span className="text-[10px] font-bold text-foreground leading-tight">Navbar Menu</span>
+              <span className="text-[8px] text-muted-foreground">Show in header</span>
+            </div>
+          </label>
+
+          <label className="flex items-center gap-2 p-2.5 rounded-xl border border-border bg-card cursor-pointer hover:bg-muted/10 transition-all select-none opacity-90">
+            <input
+              type="checkbox"
+              disabled={isSaving}
+              checked={showInFooter}
+              onChange={(e) => setShowInFooter(e.target.checked)}
+              className="rounded border-border text-primary focus:ring-0 cursor-pointer disabled:opacity-50"
+            />
+            <div className="flex flex-col">
+              <span className="text-[10px] font-bold text-foreground leading-tight">Footer Links</span>
+              <span className="text-[8px] text-muted-foreground">Show in footer</span>
             </div>
           </label>
         </div>
 
-        {/* Buttons */}
+        {/* 8. Hero Banner Image (Wide Banner for Top Page) - Placed at Bottom */}
+        <div className="space-y-1.5 p-3.5 rounded-xl border border-border/80 bg-muted/20">
+          <div className="flex items-center justify-between">
+            <label className="text-[11px] font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+              <ImageIcon size={13} className="text-primary" />
+              <span>Category Hero Banner (Top Wide Image)</span>
+            </label>
+            <div className="flex bg-muted p-0.5 rounded-lg border border-border">
+              <button
+                type="button"
+                onClick={() => setBannerUploadMode("upload")}
+                className={`text-[9px] font-bold px-2 py-0.5 rounded-md transition-all cursor-pointer ${
+                  bannerUploadMode === "upload"
+                    ? "bg-card text-foreground shadow-xs"
+                    : "text-muted-foreground"
+                }`}
+              >
+                Upload File
+              </button>
+              <button
+                type="button"
+                onClick={() => setBannerUploadMode("url")}
+                className={`text-[9px] font-bold px-2 py-0.5 rounded-md transition-all cursor-pointer ${
+                  bannerUploadMode === "url"
+                    ? "bg-card text-foreground shadow-xs"
+                    : "text-muted-foreground"
+                }`}
+              >
+                Image URL
+              </button>
+            </div>
+          </div>
+
+          {bannerUploadMode === "upload" ? (
+            <div
+              onDragOver={(e) => { e.preventDefault(); setIsDraggingBanner(true); }}
+              onDragLeave={() => setIsDraggingBanner(false)}
+              onDrop={async (e) => {
+                e.preventDefault();
+                setIsDraggingBanner(false);
+                const file = e.dataTransfer.files?.[0];
+                if (file) await uploadBannerFile(file);
+              }}
+              className={`border border-dashed rounded-xl p-3 text-center cursor-pointer transition-all ${
+                isDraggingBanner
+                  ? "border-primary bg-primary/5"
+                  : "border-border hover:border-primary bg-card"
+              }`}
+              onClick={() => document.getElementById("category-banner-file-input-id")?.click()}
+            >
+              <input
+                type="file"
+                id="category-banner-file-input-id"
+                className="hidden"
+                accept="image/*"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (file) await uploadBannerFile(file);
+                }}
+                disabled={isUploadingImage || isSaving}
+              />
+              {categoryBanner ? (
+                <div className="relative w-full h-24 mx-auto group overflow-hidden rounded-lg border border-border">
+                  <img
+                    src={categoryBanner}
+                    alt="Category Banner Preview"
+                    className="w-full h-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCategoryBanner("");
+                    }}
+                    className="absolute top-1.5 right-1.5 bg-destructive text-white p-1 rounded-full hover:bg-destructive/90 shadow transition-all cursor-pointer"
+                  >
+                    <X size={11} />
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-1 text-muted-foreground py-1">
+                  <UploadCloud size={20} className="mx-auto text-muted/50" />
+                  <p className="text-[10px] font-bold text-foreground">Upload wide banner image (1200x350 recommended)</p>
+                  <p className="text-[8px]">or drag & drop file here (Max 3MB)</p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-1">
+              <input
+                type="text"
+                disabled={isSaving}
+                placeholder="Paste banner image URL e.g. https://domain.com/banner.jpg"
+                value={categoryBanner}
+                onChange={(e) => setCategoryBanner(e.target.value)}
+                className="w-full h-9 px-3 rounded-lg border border-border bg-card text-xs font-medium text-foreground outline-none focus:border-primary transition-all placeholder:text-muted-foreground disabled:opacity-50"
+              />
+              {categoryBanner && (
+                <div className="mt-1 relative h-20 w-full rounded-lg overflow-hidden border border-border">
+                  <img
+                    src={categoryBanner}
+                    alt="Banner Preview"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = "none";
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* 9. Category Description (SEO Content for Footer Area) - Placed at Bottom */}
+        <div className="space-y-1.5 p-3.5 rounded-xl border border-border/80 bg-muted/15">
+          <div className="flex items-center justify-between">
+            <label className="text-[11px] font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+              <FileText size={13} className="text-primary" />
+              <span>Category Description (SEO Footer Content)</span>
+            </label>
+            <span className="text-[9px] text-muted-foreground font-semibold">
+              Appears at bottom of page
+            </span>
+          </div>
+          <textarea
+            rows={4}
+            disabled={isSaving}
+            placeholder="Write a comprehensive SEO overview, buyer's guide, key benefits, and search keywords for this category. This content will appear at the bottom of the category page for search engines and shoppers..."
+            value={categoryDescription}
+            onChange={(e) => setCategoryDescription(e.target.value)}
+            className="w-full p-2.5 rounded-lg border border-border bg-card text-xs font-normal text-foreground outline-none focus:border-primary transition-all placeholder:text-muted-foreground disabled:opacity-50 custom-scrollbar"
+          />
+        </div>
+
+        {/* 10. Buttons */}
         <div className="flex items-center gap-2 pt-4 border-t border-border/40">
           <button
             type="submit"

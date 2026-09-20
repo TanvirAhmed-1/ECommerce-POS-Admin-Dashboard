@@ -16,16 +16,16 @@ interface PricingTabProps {
   setWholesalePrice: (val: number | "") => void;
   salePrice: number | "";
   setSalePrice: (val: number | "") => void;
-  basePrice: number | "";
-  setBasePrice: (val: number | "") => void;
+  basePrice?: number | "";
+  setBasePrice?: (val: number | "") => void;
   vatType: "percentage" | "flat";
   setVatType: (val: "percentage" | "flat") => void;
   vat: number;
   setVat: (val: number) => void;
   baseStock: number | "";
   setBaseStock: (val: number | "") => void;
-  baseSku: string;
-  setBaseSku: (val: string) => void;
+  baseSku?: string;
+  setBaseSku?: (val: string) => void;
   setActiveTab: (val: any) => void;
 }
 
@@ -144,7 +144,7 @@ export default function PricingTab({
               onChange={(e) => {
                 const val = e.target.value !== "" ? Number(e.target.value) : "";
                 setSalePrice(val);
-                if (basePrice === "" || basePrice === 0) {
+                if (setBasePrice) {
                   setBasePrice(val);
                 }
               }}
@@ -162,54 +162,25 @@ export default function PricingTab({
         </div>
       </div>
 
-      {/* Row 2: MRP / Base Price & Stock */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 border-t border-border/40 pt-4">
-        {/* MRP / Original Base Price */}
-        <div className="space-y-1.5">
-          <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
-            Regular / MRP Price (৳ BDT)
+      {/* Stock Quantity / Inventory */}
+      <div className="p-4 rounded-xl border border-border/80 bg-muted/15 space-y-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+          <label className="text-[11px] font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+            <PackageIcon size={13} className="text-primary" />
+            Stock Quantity (Inventory)
           </label>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground">৳</span>
-            <input
-              type="number"
-              min={0}
-              step="0.01"
-              placeholder="e.g. 990 (List / Strike price)"
-              value={basePrice}
-              onChange={(e) => setBasePrice(e.target.value !== "" ? Number(e.target.value) : "")}
-              className="w-full h-10 pl-8 pr-3 rounded-lg border border-border bg-card text-xs font-medium text-foreground outline-none focus:border-primary transition-all placeholder:text-muted-foreground"
-            />
-          </div>
-          <p className="text-[9px] text-muted-foreground">Shown with strikethrough if higher than Sell Price</p>
+          <span className="text-[10px] text-muted-foreground font-medium">
+            For products without variants. (If variants are used, stock is set per-variant)
+          </span>
         </div>
-
-        {/* Total Stock Quantity */}
-        <div className="space-y-1.5">
-          <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-            <PackageIcon size={12} /> Total Stock Quantity
-          </label>
+        <div className="relative">
           <input
             type="number"
             min={0}
-            placeholder="e.g. 150"
+            placeholder="e.g. 100 (Available Units)"
             value={baseStock}
             onChange={(e) => setBaseStock(e.target.value !== "" ? Number(e.target.value) : "")}
-            className="w-full h-10 px-3 rounded-lg border border-border bg-card text-xs font-medium text-foreground outline-none focus:border-primary transition-all placeholder:text-muted-foreground"
-          />
-        </div>
-
-        {/* Base SKU Code */}
-        <div className="space-y-1.5">
-          <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
-            Base SKU Code
-          </label>
-          <input
-            type="text"
-            placeholder="e.g. TSHIRT-BASE-01"
-            value={baseSku}
-            onChange={(e) => setBaseSku(e.target.value.toUpperCase())}
-            className="w-full h-10 px-3 rounded-lg border border-border bg-card text-xs font-mono font-medium text-foreground outline-none focus:border-primary transition-all placeholder:text-muted-foreground"
+            className="w-full h-10 px-3 rounded-lg border border-border bg-card text-xs font-semibold text-foreground outline-none focus:border-primary transition-all placeholder:text-muted-foreground"
           />
         </div>
       </div>

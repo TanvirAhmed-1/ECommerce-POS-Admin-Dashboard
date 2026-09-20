@@ -1,23 +1,48 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { useGetAllCategoriesQuery, useDeleteCategoryMutation } from "@/redux/features/category/categoryApi";
 import Loader from "@/components/shared/Loader";
 import { toast } from "react-hot-toast";
 import { Spinner } from "@/components/ui/spinner";
-import { Trash2 } from "lucide-react";
+import { Trash2, Plus } from "lucide-react";
 import CategoryTable from "@/components/ui/commerce/categories/CategoryTable";
-import CategoryForm from "@/components/ui/commerce/categories/CategoryForm";
-
+import CategoryModal from "@/components/ui/commerce/categories/CategoryModal";
 
 export default function CategoriesPage() {
-  const { data: categoryRes, isLoading, refetch } = useGetAllCategoriesQuery({});
+  // Query Filters & Pagination State
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [activeFilter, setActiveFilter] = useState<string>("");
+  const [navbarFilter, setNavbarFilter] = useState<string>("");
+  const [footerFilter, setFooterFilter] = useState<string>("");
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(20);
+
+  // Construct backend query params
+  const queryParams = useMemo(() => {
+    const p: Record<string, any> = {
+      page: currentPage,
+      limit: itemsPerPage,
+    };
+    if (searchQuery.trim()) p.search = searchQuery.trim();
+    if (activeFilter) p.isActive = activeFilter;
+    if (navbarFilter) p.showInNavbar = navbarFilter;
+    if (footerFilter) p.showInFooter = footerFilter;
+    return p;
+  }, [currentPage, itemsPerPage, searchQuery, activeFilter, navbarFilter, footerFilter]);
+
+  // Main categories query (backend filtered & paginated)
+  const { data: categoryRes, isLoading, refetch } = useGetAllCategoriesQuery(queryParams);
+
+  // Full category list query (for parent category selector in Modal)
+  const { data: allCategoriesRes, refetch: refetchAll } = useGetAllCategoriesQuery({ isAll: true });
+
   const [deleteCategory, { isLoading: isDeleting }] = useDeleteCategoryMutation();
 
-  // Categories list with fallback
+  // Categories array with fallback
   const categories = useMemo(() => {
-    if (categoryRes && Array.isArray(categoryRes.data) && categoryRes.data.length > 0) {
+    if (categoryRes && Array.isArray(categoryRes.data)) {
       return categoryRes.data;
     }
     if (Array.isArray(categoryRes)) {
@@ -26,55 +51,74 @@ export default function CategoriesPage() {
     return [];
   }, [categoryRes]);
 
+  // Meta pagination data
+  const meta = useMemo(() => {
+    return (
+      categoryRes?.meta || {
+        page: currentPage,
+        limit: itemsPerPage,
+        total: categories.length,
+        totalPage: Math.ceil(categories.length / itemsPerPage) || 1,
+      }
+    );
+  }, [categoryRes, currentPage, itemsPerPage, categories.length]);
+
+  // Flat list for Parent Category selection in Modal
+  const flatCategories = useMemo(() => {
+    const list = Array.isArray(allCategoriesRes?.data) ? allCategoriesRes.data : [];
+    return list.map((c: any) => ({
+      _id: c._id,
+      name: c.name,
+      level: c.level || 0,
+    }));
+  }, [allCategoriesRes]);
+
   // UI state controls
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
-  const [searchQuery, setSearchQuery] = useState<string>("");
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [itemsPerPage, setItemsPerPage] = useState<number>(20);
 
-  // Form edit target state
+  // Modal State
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [formMode, setFormMode] = useState<"create" | "update" | "sub">("create");
   const [selectedCategory, setSelectedCategory] = useState<any | null>(null);
 
-  // Reset pagination on search query change
-  useEffect(() => {
+  // Reset Filters Handler
+  const handleResetFilters = () => {
+    setSearchQuery("");
+    setActiveFilter("");
+    setNavbarFilter("");
+    setFooterFilter("");
     setCurrentPage(1);
-  }, [searchQuery]);
-
-  // Helper to flat list for selection
-  const flatCategories = useMemo(() => {
-    const list: { _id: string; name: string; level: number }[] = [];
-    const traverse = (items: any[]) => {
-      items.forEach((item) => {
-        list.push({ _id: item._id, name: item.name, level: item.level });
-        if (item.children) {
-          traverse(item.children);
-        }
-      });
-    };
-    traverse(categories);
-    return list;
-  }, [categories]);
+  };
 
   // Click Handlers
+  const handleCreateClick = () => {
+    setFormMode("create");
+    setSelectedCategory(null);
+    setIsModalOpen(true);
+  };
+
   const handleEditClick = (category: any) => {
     setFormMode("update");
     setSelectedCategory(category);
+    setIsModalOpen(true);
   };
 
   const handleAddSubClick = (category: any) => {
     setFormMode("sub");
     setSelectedCategory(category);
+    setIsModalOpen(true);
   };
 
-  const handleCancel = () => {
-    setFormMode("create");
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
     setSelectedCategory(null);
+    setFormMode("create");
   };
 
   const handleSaveSuccess = () => {
-    handleCancel();
+    handleCloseModal();
     refetch();
+    refetchAll();
   };
 
   const handleDeleteClick = (id: string, name: string, e: React.MouseEvent) => {
@@ -93,6 +137,7 @@ export default function CategoriesPage() {
       toast.success(`Successfully deleted "${name}"!`, { id: toastId });
       setDeleteTarget(null);
       refetch();
+      refetchAll();
     } catch (err: any) {
       console.error(err);
       toast.error(
@@ -102,7 +147,7 @@ export default function CategoriesPage() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading && !categoryRes) {
     return (
       <DashboardLayout>
         <div className="flex h-[75vh] w-full items-center justify-center">
@@ -116,49 +161,65 @@ export default function CategoriesPage() {
     <DashboardLayout>
       <div className="space-y-6 animate-fade-in">
         {/* Breadcrumb & Header */}
-        <div className="space-y-1">
-          <div className="flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
-            <span>Commerce</span>
-            <span className="opacity-50">/</span>
-            <span className="text-foreground">Categories</span>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+              <span>Commerce</span>
+              <span className="opacity-50">/</span>
+              <span className="text-foreground">Categories</span>
+            </div>
+            <h2 className="text-2xl font-bold font-heading text-foreground">Categories</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Manage your eCommerce product categories, subcategories, hero banners, and SEO descriptions.
+            </p>
           </div>
-          <h2 className="text-2xl font-bold font-heading text-foreground">Categories</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Manage your eCommerce product categories, subcategories, and hierarchy tree.
-          </p>
+
+          <button
+            type="button"
+            onClick={handleCreateClick}
+            className="self-start sm:self-auto flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white text-xs font-bold hover:opacity-90 transition-all cursor-pointer shadow-md shadow-primary/25 active:scale-98"
+          >
+            <Plus size={16} />
+            <span>Add New Category</span>
+          </button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left Panel: Category table & search */}
-          <div className="lg:col-span-8 space-y-4">
-            <CategoryTable
-              categories={categories}
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-              currentPage={currentPage}
-              setCurrentPage={setCurrentPage}
-              itemsPerPage={itemsPerPage}
-              setItemsPerPage={setItemsPerPage}
-              targetId={selectedCategory?._id || null}
-              handleEditClick={handleEditClick}
-              handleAddSubClick={handleAddSubClick}
-              handleDeleteClick={handleDeleteClick}
-              handleCancel={handleCancel}
-            />
-          </div>
-
-          {/* Right Panel: Edit/Create form */}
-          <div className="lg:col-span-4">
-            <CategoryForm
-              formMode={formMode}
-              activeCategory={selectedCategory}
-              flatCategories={flatCategories}
-              onSaveSuccess={handleSaveSuccess}
-              onCancel={handleCancel}
-            />
-          </div>
+        {/* Category Hierarchy Table */}
+        <div className="w-full">
+          <CategoryTable
+            categories={categories}
+            meta={meta}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            activeFilter={activeFilter}
+            setActiveFilter={setActiveFilter}
+            navbarFilter={navbarFilter}
+            setNavbarFilter={setNavbarFilter}
+            footerFilter={footerFilter}
+            setFooterFilter={setFooterFilter}
+            currentPage={currentPage}
+            setCurrentPage={setCurrentPage}
+            itemsPerPage={itemsPerPage}
+            setItemsPerPage={setItemsPerPage}
+            targetId={selectedCategory?._id || null}
+            handleEditClick={handleEditClick}
+            handleAddSubClick={handleAddSubClick}
+            handleDeleteClick={handleDeleteClick}
+            handleResetFilters={handleResetFilters}
+            isLoading={isLoading}
+          />
         </div>
       </div>
+
+      {/* CATEGORY CREATE / UPDATE MODAL */}
+      <CategoryModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        formMode={formMode}
+        activeCategory={selectedCategory}
+        flatCategories={flatCategories}
+        onSaveSuccess={handleSaveSuccess}
+      />
 
       {/* DELETE CONFIRMATION MODAL */}
       {deleteTarget && (
@@ -208,3 +269,5 @@ export default function CategoriesPage() {
     </DashboardLayout>
   );
 }
+
+
