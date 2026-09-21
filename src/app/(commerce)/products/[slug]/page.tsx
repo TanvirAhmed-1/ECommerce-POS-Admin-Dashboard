@@ -628,9 +628,31 @@ function ProductDetailsContent() {
               <Layers size={13} className="text-primary" />
               Product Details
             </h3>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              {product.description || product.shortDescription}
-            </p>
+            {product.keyFeatures && product.keyFeatures.length > 0 && (
+              <div className="space-y-2 py-2">
+                <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block">
+                  Key Highlights:
+                </span>
+                <div className="space-y-1.5">
+                  {product.keyFeatures.map((feat, idx) => (
+                    <div key={idx} className="flex items-start gap-2 text-xs font-semibold text-foreground">
+                      <span className="text-emerald-500 shrink-0">✅</span>
+                      <span>{feat}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {product.description ? (
+              <div
+                className="text-xs text-muted-foreground leading-relaxed prose dark:prose-invert max-w-none pt-1"
+                dangerouslySetInnerHTML={{ __html: product.description }}
+              />
+            ) : (
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                {product.shortDescription}
+              </p>
+            )}
           </div>
         </div>
       </div>

@@ -392,17 +392,17 @@ export default function MediaTab({
       <div className="flex justify-between items-center pt-2">
         <button
           type="button"
-          onClick={() => setActiveTab("general")}
+          onClick={() => setActiveTab("description")}
           className="h-9 px-4 border border-border bg-card text-foreground hover:bg-muted text-xs font-bold rounded-lg cursor-pointer"
         >
-          Back
+          ← Back to Description
         </button>
         <button
           type="button"
           onClick={() => setActiveTab("pricing")}
           className="h-9 px-4 bg-primary text-white text-xs font-bold rounded-lg hover:opacity-90 cursor-pointer"
         >
-          Continue to Pricing
+          Continue to Pricing →
         </button>
       </div>
     </div>

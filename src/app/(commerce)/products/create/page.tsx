@@ -22,10 +22,12 @@ import {
   Image as ImageIcon,
   Sliders,
   Globe,
+  FileText,
 } from "lucide-react";
 import { TbCurrencyTaka } from "react-icons/tb";
 
 import GeneralTab from "@/components/ui/commerce/products/create/GeneralTab";
+import DescriptionTab from "@/components/ui/commerce/products/create/DescriptionTab";
 import MediaTab from "@/components/ui/commerce/products/create/MediaTab";
 import PricingTab from "@/components/ui/commerce/products/create/PricingTab";
 import SeoTab from "@/components/ui/commerce/products/create/SeoTab";
@@ -57,7 +59,7 @@ function ProductFormContent() {
   const editId = searchParams.get("edit");
 
   // Active Wizard Tab
-  const [activeTab, setActiveTab] = useState<"general" | "media" | "pricing" | "seo" | "variants">("general");
+  const [activeTab, setActiveTab] = useState<"general" | "description" | "media" | "pricing" | "seo" | "variants">("general");
 
   // RTK Queries & Mutations
   const { data: productsRes, refetch: refetchProducts } = useGetAllProductsQuery({});
@@ -168,6 +170,10 @@ function ProductFormContent() {
   const [slug, setSlug] = useState("");
   const [shortDescription, setShortDescription] = useState("");
   const [description, setDescription] = useState("");
+  const [keyFeatures, setKeyFeatures] = useState<string[]>([]);
+  const [specifications, setSpecifications] = useState<{ key: string; value: string }[]>([]);
+  const [warranty, setWarranty] = useState<string>("Official Brand Warranty");
+  const [warrantyPolicy, setWarrantyPolicy] = useState<string>("");
 
   // Pricing & Stock
   const [purchasePrice, setPurchasePrice] = useState<number | "">("");
@@ -257,6 +263,10 @@ function ProductFormContent() {
         setSlug(target.slug || "");
         setShortDescription(target.shortDescription || "");
         setDescription(target.description || "");
+        setKeyFeatures(Array.isArray(target.keyFeatures) ? target.keyFeatures : []);
+        setSpecifications(Array.isArray(target.specifications) ? target.specifications : []);
+        setWarranty(target.warranty || "Official Brand Warranty");
+        setWarrantyPolicy(target.warrantyPolicy || "");
 
         setPurchasePrice(target.purchasePrice !== undefined ? target.purchasePrice : "");
         setWholesalePrice(target.wholesalePrice !== undefined ? target.wholesalePrice : (target.resellerPrice !== undefined ? target.resellerPrice : ""));
@@ -449,10 +459,6 @@ function ProductFormContent() {
       toast.error("Product name is required!");
       return;
     }
-    if (!shortDescription.trim() || shortDescription.trim().length < 10) {
-      toast.error("Short description is required (min 10 characters)!");
-      return;
-    }
     if (!category) {
       toast.error("Please select a Category!");
       return;
@@ -484,6 +490,10 @@ function ProductFormContent() {
       slug: slug.trim() || slugifyString(name),
       shortDescription: shortDescription.trim(),
       description: description.trim() || undefined,
+      keyFeatures: keyFeatures.filter(f => f.trim().length > 0),
+      specifications: specifications.filter(s => s.key.trim().length > 0 && s.value.trim().length > 0),
+      warranty: warranty.trim() || undefined,
+      warrantyPolicy: warrantyPolicy.trim() || undefined,
 
       category,
       subcategory: subcategory || undefined,
@@ -636,10 +646,11 @@ function ProductFormContent() {
       <div className="flex border-b border-border gap-6 overflow-x-auto pb-0.5 custom-scrollbar">
         {[
           { key: "general", label: "1. Info & Relations", icon: <Info size={14} /> },
-          { key: "media", label: "2. Product Media", icon: <ImageIcon size={14} /> },
-          { key: "pricing", label: "3. Pricing & Inventory", icon: <TbCurrencyTaka size={14} /> },
-          { key: "seo", label: "4. SEO Configurations", icon: <Globe size={14} /> },
-          { key: "variants", label: "5. Specifications & Variants", icon: <Sliders size={14} /> },
+          { key: "description", label: "2. Description", icon: <FileText size={14} /> },
+          { key: "media", label: "3. Product Media", icon: <ImageIcon size={14} /> },
+          { key: "pricing", label: "4. Pricing & Inventory", icon: <TbCurrencyTaka size={14} /> },
+          { key: "seo", label: "5. SEO Configurations", icon: <Globe size={14} /> },
+          { key: "variants", label: "6. Specifications & Variants", icon: <Sliders size={14} /> },
         ].map((tab) => (
           <button
             className={`flex items-center gap-2 pb-3 text-xs font-bold transition-all relative cursor-pointer select-none whitespace-nowrap ${
@@ -696,10 +707,20 @@ function ProductFormContent() {
               setBarcode={setBarcode}
               weight={weight}
               setWeight={setWeight}
+              setActiveTab={setActiveTab}
+            />
+          )}
+
+          {activeTab === "description" && (
+            <DescriptionTab
               shortDescription={shortDescription}
               setShortDescription={setShortDescription}
               description={description}
               setDescription={setDescription}
+              keyFeatures={keyFeatures}
+              setKeyFeatures={setKeyFeatures}
+              warrantyPolicy={warrantyPolicy}
+              setWarrantyPolicy={setWarrantyPolicy}
               setActiveTab={setActiveTab}
             />
           )}
@@ -773,6 +794,8 @@ function ProductFormContent() {
               setSelectedAttrValues={setSelectedAttrValues}
               variants={variants}
               setVariants={setVariants}
+              specifications={specifications}
+              setSpecifications={setSpecifications}
               setActiveVariantImageEditId={setActiveVariantImageEditId}
               slug={slug}
               basePrice={basePrice}

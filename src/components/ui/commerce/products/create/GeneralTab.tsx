@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import {
   Sparkles,
@@ -11,7 +13,6 @@ import {
   FolderTree,
   Plus,
   RefreshCw,
-  Info,
 } from "lucide-react";
 
 interface GeneralTabProps {
@@ -46,10 +47,6 @@ interface GeneralTabProps {
   setBarcode: (val: string) => void;
   weight: number | "";
   setWeight: (val: number | "") => void;
-  shortDescription: string;
-  setShortDescription: (val: string) => void;
-  description: string;
-  setDescription: (val: string) => void;
   setActiveTab: (val: any) => void;
 }
 
@@ -85,10 +82,6 @@ export default function GeneralTab({
   setBarcode,
   weight,
   setWeight,
-  shortDescription,
-  setShortDescription,
-  description,
-  setDescription,
   setActiveTab,
 }: GeneralTabProps) {
   const slugifyString = (text: string) => {
@@ -108,12 +101,10 @@ export default function GeneralTab({
   };
 
   const generateBarcode = () => {
-    // Generate a standard EAN-13 format random barcode
     let code = "890";
     for (let i = 0; i < 9; i++) {
       code += Math.floor(Math.random() * 10);
     }
-    // Simple checksum
     let sum = 0;
     for (let i = 0; i < 12; i++) {
       sum += parseInt(code[i]) * (i % 2 === 0 ? 1 : 3);
@@ -171,7 +162,7 @@ export default function GeneralTab({
           <input
             type="text"
             required
-            placeholder="e.g. Classic Oxford Cotton Shirt"
+            placeholder="e.g. Classic Oxford Cotton Shirt / Joyroom ANC Earbuds"
             value={name}
             onChange={(e) => handleNameChange(e.target.value)}
             className="w-full h-10 px-3 rounded-lg border border-border bg-card text-xs font-medium text-foreground outline-none focus:border-primary transition-all placeholder:text-muted-foreground"
@@ -306,7 +297,7 @@ export default function GeneralTab({
           <input
             type="text"
             required
-            placeholder="e.g. classic-oxford-shirt"
+            placeholder="e.g. joyroom-jr-t03s-pro"
             value={slug}
             onChange={(e) => handleSlugChange(e.target.value)}
             className="w-full h-10 px-3 rounded-lg border border-border bg-card text-xs font-mono text-foreground outline-none focus:border-primary transition-all placeholder:text-muted-foreground"
@@ -329,7 +320,7 @@ export default function GeneralTab({
           </div>
           <input
             type="text"
-            placeholder="e.g. OXFORD-BASE-01"
+            placeholder="e.g. JOYROOM-BASE-01"
             value={baseSku}
             onChange={(e) => setBaseSku(e.target.value.toUpperCase())}
             className="w-full h-10 px-3 rounded-lg border border-border bg-card text-xs font-mono font-medium text-foreground outline-none focus:border-primary transition-all placeholder:text-muted-foreground"
@@ -369,7 +360,7 @@ export default function GeneralTab({
           </label>
           <input
             type="text"
-            placeholder="e.g. 100% Cotton, Leather"
+            placeholder="e.g. ABS Plastic, Metal Alloy"
             value={materials}
             onChange={(e) => setMaterials(e.target.value)}
             className="w-full h-10 px-3 rounded-lg border border-border bg-card text-xs font-medium text-foreground outline-none focus:border-primary transition-all placeholder:text-muted-foreground"
@@ -431,7 +422,7 @@ export default function GeneralTab({
               type="number"
               step="0.01"
               min="0"
-              placeholder="e.g. 0.45"
+              placeholder="e.g. 0.045"
               value={weight}
               onChange={(e) => setWeight(e.target.value !== "" ? Number(e.target.value) : "")}
               className="w-full h-10 pl-3 pr-10 rounded-lg border border-border bg-card text-xs font-medium text-foreground outline-none focus:border-primary transition-all placeholder:text-muted-foreground"
@@ -443,44 +434,14 @@ export default function GeneralTab({
         </div>
       </div>
 
-      {/* Descriptions */}
-      <div className="space-y-4 pt-2 border-t border-border/40">
-        <div className="space-y-1.5">
-          <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
-            Short Description <span className="text-red-500">*</span> (min 10 characters)
-          </label>
-          <input
-            type="text"
-            required
-            placeholder="A quick, punchy summary of key features and highlights..."
-            value={shortDescription}
-            onChange={(e) => setShortDescription(e.target.value)}
-            className="w-full h-10 px-3 rounded-lg border border-border bg-card text-xs font-medium text-foreground outline-none focus:border-primary transition-all placeholder:text-muted-foreground"
-          />
-        </div>
-
-        <div className="space-y-1.5">
-          <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
-            Detailed Description (Optional)
-          </label>
-          <textarea
-            rows={5}
-            placeholder="Enter comprehensive information regarding composition, wash instructions, sizing, specifications..."
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            className="w-full p-3 rounded-lg border border-border bg-card text-xs font-medium text-foreground outline-none focus:border-primary transition-all placeholder:text-muted-foreground resize-none"
-          />
-        </div>
-      </div>
-
       {/* Next Step Button */}
-      <div className="flex justify-end pt-2">
+      <div className="flex justify-end pt-2 border-t border-border/40">
         <button
           type="button"
-          onClick={() => setActiveTab("media")}
+          onClick={() => setActiveTab("description")}
           className="h-9 px-5 bg-primary text-white text-xs font-bold rounded-lg hover:opacity-90 cursor-pointer shadow-sm shadow-primary/20 transition-all flex items-center gap-1.5"
         >
-          <span>Continue to Media</span>
+          <span>Continue to Description</span>
           <span>→</span>
         </button>
       </div>
