@@ -26,6 +26,9 @@ interface PricingTabProps {
   setBaseStock: (val: number | "") => void;
   baseSku?: string;
   setBaseSku?: (val: string) => void;
+  hasVariants?: boolean;
+  variantsCount?: number;
+  totalVariantStock?: number;
   setActiveTab: (val: any) => void;
 }
 
@@ -46,6 +49,9 @@ export default function PricingTab({
   setBaseStock,
   baseSku,
   setBaseSku,
+  hasVariants = false,
+  variantsCount = 0,
+  totalVariantStock = 0,
   setActiveTab,
 }: PricingTabProps) {
   // Live Profit Calculations
@@ -170,19 +176,41 @@ export default function PricingTab({
             Stock Quantity (Inventory)
           </label>
           <span className="text-[10px] text-muted-foreground font-medium">
-            For products without variants. (If variants are used, stock is set per-variant)
+            {hasVariants || variantsCount > 0
+              ? "Managed by Variant Matrix in Step 6 (Specifications & Variants)"
+              : "For products without variations (Simple Product stock)"}
           </span>
         </div>
-        <div className="relative">
-          <input
-            type="number"
-            min={0}
-            placeholder="e.g. 100 (Available Units)"
-            value={baseStock}
-            onChange={(e) => setBaseStock(e.target.value !== "" ? Number(e.target.value) : "")}
-            className="w-full h-10 px-3 rounded-lg border border-border bg-card text-xs font-semibold text-foreground outline-none focus:border-primary transition-all placeholder:text-muted-foreground"
-          />
-        </div>
+
+        {hasVariants || variantsCount > 0 ? (
+          <div className="flex items-center justify-between p-3 rounded-lg border border-primary/20 bg-primary/5 text-xs">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+              <span className="font-semibold text-foreground">
+                Total Variant Inventory:{" "}
+                <strong className="text-primary font-bold">{totalVariantStock} units</strong> across {variantsCount} combinations
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setActiveTab("variants")}
+              className="text-[11px] font-bold text-primary hover:underline cursor-pointer"
+            >
+              Edit in Tab 6 →
+            </button>
+          </div>
+        ) : (
+          <div className="relative">
+            <input
+              type="number"
+              min={0}
+              placeholder="e.g. 100 (Available Units)"
+              value={baseStock}
+              onChange={(e) => setBaseStock(e.target.value !== "" ? Number(e.target.value) : "")}
+              className="w-full h-10 px-3 rounded-lg border border-border bg-card text-xs font-semibold text-foreground outline-none focus:border-primary transition-all placeholder:text-muted-foreground"
+            />
+          </div>
+        )}
       </div>
 
       {/* VAT / Tax Configuration (percentage ba flat) */}

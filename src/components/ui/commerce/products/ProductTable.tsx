@@ -83,21 +83,18 @@ export default function ProductTable({
                         </div>
                         <div className="flex flex-col min-w-0 max-w-xs md:max-w-sm">
                           <span className="font-semibold text-foreground truncate group-hover/link:text-primary transition-all">{prod.name}</span>
-                          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                            {prod.productCode && (
-                              <span className="text-[9px] font-mono font-semibold px-1.5 py-0.5 rounded bg-primary/10 text-primary">
-                                {prod.productCode}
-                              </span>
-                            )}
-                            {prod.sku && (
+                          {prod.sku && (
+                            <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                               <span className="text-[9px] font-mono text-muted-foreground">
                                 SKU: {prod.sku}
                               </span>
-                            )}
-                          </div>
-                          <span className="text-[10px] text-muted-foreground truncate font-medium mt-0.5">
-                            {prod.description || "No description provided."}
-                          </span>
+                            </div>
+                          )}
+                          {prod.slug && (
+                            <span className="text-[10px] text-muted-foreground truncate font-mono mt-0.5" title={prod.slug}>
+                              /{prod.slug}
+                            </span>
+                          )}
                         </div>
                       </Link>
                     </TableCell>

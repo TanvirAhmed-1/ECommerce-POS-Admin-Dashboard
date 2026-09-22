@@ -311,32 +311,63 @@ function ProductFormContent() {
 
           const mappedVariants = loadedVariants.map((v: any) => {
             let attributesObj: Record<string, string> = {};
+
             if (Array.isArray(v.attributes)) {
               v.attributes.forEach((attr: any) => {
-                const attrId = attr.attribute?._id || attr.attribute;
-                const attrName = attr.attribute?.name;
-                if (attrId && attr.value) {
-                  if (!attrIds.includes(attrId)) {
-                    attrIds.push(attrId);
-                  }
-                  if (!attrVals[attrId]) {
-                    attrVals[attrId] = [];
-                  }
-                  if (!attrVals[attrId].includes(attr.value)) {
-                    attrVals[attrId].push(attr.value);
-                  }
+                const attrName =
+                  attr.name ||
+                  attr.attribute?.name ||
+                  (typeof attr.attribute === "string" ? attr.attribute : "");
+                const attrVal = attr.value;
 
-                  if (attrName) {
-                    attributesObj[attrName] = attr.value;
+                if (attrName && attrVal) {
+                  attributesObj[attrName] = attrVal;
+
+                  const matchedAttr = attributes.find(
+                    (a: any) =>
+                      a._id === (attr.attribute?._id || attr.attribute) ||
+                      a.name?.toLowerCase() === attrName.toLowerCase()
+                  );
+                  const effectiveAttrId =
+                    matchedAttr?._id || attr.attribute?._id || attr.attribute || attrName;
+
+                  if (effectiveAttrId) {
+                    if (!attrIds.includes(effectiveAttrId)) {
+                      attrIds.push(effectiveAttrId);
+                    }
+                    if (!attrVals[effectiveAttrId]) {
+                      attrVals[effectiveAttrId] = [];
+                    }
+                    if (!attrVals[effectiveAttrId].includes(attrVal)) {
+                      attrVals[effectiveAttrId].push(attrVal);
+                    }
                   }
                 }
               });
             } else if (v.attributes && typeof v.attributes === "object") {
               attributesObj = v.attributes;
+              Object.entries(attributesObj).forEach(([attrName, val]) => {
+                const matchedAttr = attributes.find(
+                  (a: any) => a.name?.toLowerCase() === attrName.toLowerCase()
+                );
+                const effectiveAttrId = matchedAttr?._id || attrName;
+                if (effectiveAttrId && val) {
+                  if (!attrIds.includes(effectiveAttrId)) {
+                    attrIds.push(effectiveAttrId);
+                  }
+                  if (!attrVals[effectiveAttrId]) {
+                    attrVals[effectiveAttrId] = [];
+                  }
+                  if (!attrVals[effectiveAttrId].includes(String(val))) {
+                    attrVals[effectiveAttrId].push(String(val));
+                  }
+                }
+              });
             }
 
             const nameParts = Object.values(attributesObj);
-            const variantName = nameParts.length > 0 ? nameParts.join(" / ") : (v.name || v.sku || "Variant");
+            const variantName =
+              nameParts.length > 0 ? nameParts.join(" / ") : (v.name || v.sku || "Variant");
 
             return {
               ...v,
@@ -356,7 +387,7 @@ function ProductFormContent() {
         }
       }
     }
-  }, [editId, productsRes, localProducts]);
+  }, [editId, productsRes, localProducts, attributes]);
 
   const slugifyString = (text: string) => {
     return text
@@ -519,19 +550,33 @@ function ProductFormContent() {
       vat: Number(vat) || 0,
 
       hasVariants: variants.length > 0,
-      totalStock: baseStock !== "" ? Number(baseStock) : 0,
+      totalStock:
+        variants.length > 0
+          ? variants.reduce((acc, v) => acc + (Number(v.stock) || 0), 0)
+          : baseStock !== ""
+          ? Number(baseStock)
+          : 0,
       sku: baseSku.trim() || undefined,
       variants: variants.length > 0 ? variants.map(v => {
         let mappedAttributes: { attribute: string; value: string }[] = [];
 
         if (Array.isArray(v.attributes)) {
-          mappedAttributes = v.attributes.map((attr: any) => ({
-            attribute: attr.attribute?._id || attr.attribute,
-            value: attr.value,
-          }));
+          mappedAttributes = v.attributes.map((attr: any) => {
+            const attrIdOrObj = attr.attribute?._id || attr.attribute;
+            const attrName = attr.name || attr.attribute?.name;
+            const matchedAttr = attributes?.find(
+              (a: any) =>
+                a._id === attrIdOrObj ||
+                (attrName && a.name?.toLowerCase() === attrName.toLowerCase())
+            );
+            return {
+              attribute: matchedAttr?._id || attrIdOrObj || attrName,
+              value: String(attr.value),
+            };
+          });
         } else if (v.attributes && typeof v.attributes === "object") {
           mappedAttributes = Object.entries(v.attributes).map(([attrName, attrVal]) => {
-            const matchedAttr = attributes.find((a: any) => a.name === attrName);
+            const matchedAttr = attributes?.find((a: any) => a.name?.toLowerCase() === attrName.toLowerCase());
             return {
               attribute: matchedAttr?._id || attrName,
               value: String(attrVal),
@@ -769,6 +814,9 @@ function ProductFormContent() {
               setBaseStock={setBaseStock}
               baseSku={baseSku}
               setBaseSku={setBaseSku}
+              hasVariants={variants.length > 0}
+              variantsCount={variants.length}
+              totalVariantStock={variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0)}
               setActiveTab={setActiveTab}
             />
           )}

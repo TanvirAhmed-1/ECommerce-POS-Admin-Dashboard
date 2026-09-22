@@ -110,13 +110,11 @@ export default function VariantConfigModal({
     const groups: Record<string, { name: string; values: string[] }> = {};
 
     variants.forEach((v) => {
-      v.attributes?.forEach((a) => {
+      v.attributes?.forEach((a: any) => {
         const name =
-          typeof a.attribute === "object" && a.attribute?.name
-            ? a.attribute.name
-            : typeof a.attribute === "string"
-            ? a.attribute
-            : "Option";
+          (typeof a.attribute === "object" && a.attribute?.name) ||
+          a.name ||
+          (typeof a.attribute === "string" ? a.attribute : "Option");
         
         if (!groups[name]) {
           groups[name] = { name, values: [] };
@@ -158,13 +156,11 @@ export default function VariantConfigModal({
     // Populate selectedOptions from chosen variant
     if (chosen?.attributes && chosen.attributes.length > 0) {
       const opts: Record<string, string> = {};
-      chosen.attributes.forEach((a) => {
+      chosen.attributes.forEach((a: any) => {
         const name =
-          typeof a.attribute === "object" && a.attribute?.name
-            ? a.attribute.name
-            : typeof a.attribute === "string"
-            ? a.attribute
-            : "Option";
+          (typeof a.attribute === "object" && a.attribute?.name) ||
+          a.name ||
+          (typeof a.attribute === "string" ? a.attribute : "Option");
         if (a.value) {
           opts[name] = a.value;
         }
@@ -187,13 +183,11 @@ export default function VariantConfigModal({
     // Find matching variant
     const matched = variants.find((v) => {
       if (!v.attributes || v.attributes.length === 0) return false;
-      return v.attributes.every((a) => {
+      return v.attributes.every((a: any) => {
         const name =
-          typeof a.attribute === "object" && a.attribute?.name
-            ? a.attribute.name
-            : typeof a.attribute === "string"
-            ? a.attribute
-            : "Option";
+          (typeof a.attribute === "object" && a.attribute?.name) ||
+          a.name ||
+          (typeof a.attribute === "string" ? a.attribute : "Option");
         return updatedOptions[name] === a.value;
       });
     });
@@ -203,26 +197,22 @@ export default function VariantConfigModal({
     } else {
       // Find variant that matches the maximum number of selected options
       const partialMatch = variants.find((v) => {
-        return v.attributes?.some((a) => {
+        return v.attributes?.some((a: any) => {
           const name =
-            typeof a.attribute === "object" && a.attribute?.name
-              ? a.attribute.name
-              : typeof a.attribute === "string"
-              ? a.attribute
-              : "Option";
+            (typeof a.attribute === "object" && a.attribute?.name) ||
+            a.name ||
+            (typeof a.attribute === "string" ? a.attribute : "Option");
           return name === attrName && a.value === value;
         });
       });
       if (partialMatch) {
         setActiveVariant(partialMatch);
         const newOpts: Record<string, string> = {};
-        partialMatch.attributes?.forEach((a) => {
+        partialMatch.attributes?.forEach((a: any) => {
           const name =
-            typeof a.attribute === "object" && a.attribute?.name
-              ? a.attribute.name
-              : typeof a.attribute === "string"
-              ? a.attribute
-              : "Option";
+            (typeof a.attribute === "object" && a.attribute?.name) ||
+            a.name ||
+            (typeof a.attribute === "string" ? a.attribute : "Option");
           if (a.value) newOpts[name] = a.value;
         });
         setSelectedOptions(newOpts);
@@ -235,13 +225,11 @@ export default function VariantConfigModal({
     setActiveVariant(variant);
     if (variant.attributes) {
       const opts: Record<string, string> = {};
-      variant.attributes.forEach((a) => {
+      variant.attributes.forEach((a: any) => {
         const name =
-          typeof a.attribute === "object" && a.attribute?.name
-            ? a.attribute.name
-            : typeof a.attribute === "string"
-            ? a.attribute
-            : "Option";
+          (typeof a.attribute === "object" && a.attribute?.name) ||
+          a.name ||
+          (typeof a.attribute === "string" ? a.attribute : "Option");
         if (a.value) opts[name] = a.value;
       });
       setSelectedOptions(opts);

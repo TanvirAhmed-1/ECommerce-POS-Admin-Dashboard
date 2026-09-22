@@ -1186,7 +1186,7 @@ export default function PromotionalBannerPage() {
                       />
                       {isUploadingImage ? (
                         <div className="flex flex-col items-center gap-1.5 py-2">
-                          <Spinner size="md" />
+                          <Spinner className="w-5 h-5 text-primary" />
                           <span className="text-xs text-muted-foreground">Uploading image...</span>
                         </div>
                       ) : (

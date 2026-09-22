@@ -483,7 +483,7 @@ function ProductDetailsContent() {
                         let colorImageUrl = "";
                         if (isColor && product.productVariants) {
                           const matchingVariant = product.productVariants.find((v: any) =>
-                            v.isActive && v.attributes?.some((a: any) => (a.attribute?.name || "").toLowerCase() === "color" && a.value === val)
+                            v.isActive && v.attributes?.some((a: any) => (a.attribute?.name || a.name || "").toLowerCase() === "color" && a.value === val)
                           );
                           if (matchingVariant?.images?.[0]) {
                             colorImageUrl = matchingVariant.images[0];
@@ -500,6 +500,9 @@ function ProductDetailsContent() {
                                   ...selectedOptions,
                                   [group.name]: val,
                                 });
+                                if (colorImageUrl) {
+                                  setActiveImage(colorImageUrl);
+                                }
                               }}
                               className={`relative w-16 h-16 rounded-xl border overflow-hidden transition-all cursor-pointer bg-zinc-950 ${
                                 isSelected
@@ -634,7 +637,7 @@ function ProductDetailsContent() {
                   Key Highlights:
                 </span>
                 <div className="space-y-1.5">
-                  {product.keyFeatures.map((feat, idx) => (
+                  {product.keyFeatures.map((feat: string, idx: number) => (
                     <div key={idx} className="flex items-start gap-2 text-xs font-semibold text-foreground">
                       <span className="text-emerald-500 shrink-0">✅</span>
                       <span>{feat}</span>

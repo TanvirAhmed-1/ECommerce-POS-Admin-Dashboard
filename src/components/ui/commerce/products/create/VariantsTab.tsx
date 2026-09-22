@@ -287,7 +287,7 @@ export default function VariantsTab({
 
   return (
     <div className="glass-card p-5 rounded-2xl border border-border space-y-6 animate-fade-in">
-      
+
       {/* SECTION 1: TECHNICAL SPECIFICATIONS TABLE BUILDER */}
       <div className="space-y-4 pb-6 border-b border-border/60">
         <div className="flex items-center justify-between">
@@ -411,11 +411,10 @@ export default function VariantsTab({
                       key={attr._id}
                       type="button"
                       onClick={() => handleToggleAttribute(attr._id)}
-                      className={`px-3 py-1.5 rounded-lg border text-xs font-bold cursor-pointer transition-all flex items-center gap-1.5 select-none ${
-                        isChecked
-                          ? "bg-primary/10 border-primary text-primary"
-                          : "border-border bg-card text-muted-foreground hover:text-foreground hover:border-zinc-400"
-                      }`}
+                      className={`px-3 py-1.5 rounded-lg border text-xs font-bold cursor-pointer transition-all flex items-center gap-1.5 select-none ${isChecked
+                        ? "bg-primary/10 border-primary text-primary"
+                        : "border-border bg-card text-muted-foreground hover:text-foreground hover:border-zinc-400"
+                        }`}
                     >
                       {isChecked && <Check size={12} />}
                       <span>{attr.name}</span>
@@ -477,11 +476,10 @@ export default function VariantsTab({
                                   key={val}
                                   type="button"
                                   onClick={() => handleToggleAttrValue(attr._id, val)}
-                                  className={`px-2.5 py-1 text-[11px] rounded-md border font-semibold cursor-pointer transition-all select-none ${
-                                    isValChecked
-                                      ? "bg-primary text-white border-primary shadow-sm shadow-primary/30"
-                                      : "border-border bg-card text-foreground hover:bg-muted hover:border-zinc-400"
-                                  }`}
+                                  className={`px-2.5 py-1 text-[11px] rounded-md border font-semibold cursor-pointer transition-all select-none ${isValChecked
+                                    ? "bg-primary text-white border-primary shadow-sm shadow-primary/30"
+                                    : "border-border bg-card text-foreground hover:bg-muted hover:border-zinc-400"
+                                    }`}
                                 >
                                   {val}
                                 </button>
@@ -507,7 +505,7 @@ export default function VariantsTab({
                                           <span className="text-[8px] text-muted-foreground font-bold">No Image</span>
                                         )}
                                       </div>
-                                      
+
                                       <div className="flex-1 min-w-0 space-y-1.5">
                                         <span className="text-xs font-bold text-foreground block truncate">{colorVal}</span>
                                         <div className="flex gap-2 items-center">
@@ -540,7 +538,7 @@ export default function VariantsTab({
                                               }}
                                             />
                                           </label>
-                                          
+
                                           <input
                                             type="url"
                                             placeholder="Paste URL..."
@@ -607,7 +605,7 @@ export default function VariantsTab({
                     Generated Variants ({variants.length})
                   </h4>
                   <p className="text-[10px] text-muted-foreground">
-                    Set SKU, price &amp; stock per variant below.
+                    Set price &amp; stock per variant below.
                   </p>
                 </div>
 
@@ -617,9 +615,8 @@ export default function VariantsTab({
                       <thead>
                         <tr className="border-b border-border bg-muted/40 text-muted-foreground font-bold">
                           <th className="p-3 font-bold uppercase text-[9px] tracking-wider font-heading">Variant Combination</th>
-                          <th className="p-3 font-bold uppercase text-[9px] tracking-wider w-36 font-heading">SKU Code</th>
-                          <th className="p-3 font-bold uppercase text-[9px] tracking-wider w-24 font-heading">Price (৳)</th>
-                          <th className="p-3 font-bold uppercase text-[9px] tracking-wider w-24 font-heading">Stock</th>
+                          <th className="p-3 font-bold uppercase text-[9px] tracking-wider w-28 font-heading">Price (৳)</th>
+                          <th className="p-3 font-bold uppercase text-[9px] tracking-wider w-28 font-heading">Stock</th>
                           <th className="p-3 font-bold uppercase text-[9px] tracking-wider w-40 font-heading">Images</th>
                           <th className="p-3 w-10"></th>
                         </tr>
@@ -629,7 +626,20 @@ export default function VariantsTab({
                           <tr key={v.id || v._id} className="hover:bg-muted/15 transition-colors">
                             <td className="p-3">
                               <div className="flex flex-wrap gap-1">
-                                {v.attributes && typeof v.attributes === "object" && Object.entries(v.attributes).map(([attrName, val]: [string, any]) => (
+                                {Array.isArray(v.attributes) && v.attributes.map((a: any, aIdx: number) => {
+                                  const attrName = a.name || a.attribute?.name || (typeof a.attribute === "string" ? a.attribute : "Trait");
+                                  const attrVal = a.value || String(a);
+                                  return (
+                                    <span
+                                      key={aIdx}
+                                      className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20"
+                                    >
+                                      <span className="opacity-70">{attrName}:</span>
+                                      {attrVal}
+                                    </span>
+                                  );
+                                })}
+                                {!Array.isArray(v.attributes) && v.attributes && typeof v.attributes === "object" && Object.entries(v.attributes).map(([attrName, val]: [string, any]) => (
                                   <span
                                     key={attrName}
                                     className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20"
@@ -638,18 +648,12 @@ export default function VariantsTab({
                                     {String(val)}
                                   </span>
                                 ))}
-                                {(!v.attributes || Object.keys(v.attributes).length === 0) && (
+                                {(!v.attributes ||
+                                  (Array.isArray(v.attributes) && v.attributes.length === 0) ||
+                                  (!Array.isArray(v.attributes) && typeof v.attributes === "object" && Object.keys(v.attributes).length === 0)) && (
                                   <span className="font-bold text-foreground">{v.name}</span>
                                 )}
                               </div>
-                            </td>
-                            <td className="p-3">
-                              <input
-                                type="text"
-                                value={v.sku}
-                                onChange={(e) => handleUpdateVariantField(v.id || v._id, "sku", e.target.value)}
-                                className="w-full h-8 px-2 rounded-md border border-border bg-card text-xs font-medium outline-none focus:border-zinc-400"
-                              />
                             </td>
                             <td className="p-3">
                               <input
