@@ -22,7 +22,6 @@ import {
   Save,
   Image as ImageIcon,
   Search,
-  Check,
   X,
   UploadCloud,
   ChevronLeft,
@@ -1397,7 +1396,7 @@ export default function PromotionalBannerPage() {
                     disabled={isSaving}
                     className="h-9 px-6 rounded-xl bg-primary hover:opacity-90 text-white text-xs font-bold shadow-md shadow-primary/20 flex items-center gap-1.5 transition-all cursor-pointer"
                   >
-                    {isSaving ? <Spinner size="sm" /> : <Save size={15} />}
+                    {isSaving ? <Spinner className="w-4 h-4 text-white" /> : <Save size={15} />}
                     <span>{formMode === "create" ? "Create Banner" : "Update Banner"}</span>
                   </button>
                 </div>
@@ -1435,7 +1434,7 @@ export default function PromotionalBannerPage() {
                   onClick={handleConfirmDelete}
                   className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-md shadow-rose-600/20 flex items-center gap-1.5 cursor-pointer"
                 >
-                  {isDeleting ? <Spinner size="sm" /> : <Trash2 size={15} />}
+                  {isDeleting ? <Spinner className="w-4 h-4 text-white" /> : <Trash2 size={15} />}
                   <span>Delete Banner</span>
                 </button>
               </div>

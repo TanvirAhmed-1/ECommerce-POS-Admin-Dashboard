@@ -673,9 +673,6 @@ export default function OrdersPage() {
       await deleteOrder(id).unwrap();
       toast.success(`Order ${orderNumber} deleted successfully!`, { id: toastId });
       setDeleteTarget(null);
-      if (selectedOrder?._id === id) {
-        setSelectedOrder(null);
-      }
       refetch();
     } catch (err: any) {
       console.error(err);

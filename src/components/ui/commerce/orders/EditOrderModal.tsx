@@ -284,7 +284,7 @@ export default function EditOrderModal({
       paymentMethod,
       callStatus,
       callNote: callNote.trim(),
-      agentName: currentUser?.user?.name || "Admin Staff",
+      agentName: (currentUser as any)?.user?.name || (currentUser as any)?.name || "Admin Staff",
     };
 
     const toastId = toast.loading("Updating and confirming order modifications...");
@@ -913,7 +913,7 @@ export default function EditOrderModal({
         <div className="p-4 sm:p-5 border-t border-border bg-card flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <UserCheck size={14} className="text-emerald-500" />
-            <span>Agent: <strong>{currentUser?.user?.name || "Admin Staff"}</strong></span>
+            <span>Agent: <strong>{(currentUser as any)?.user?.name || (currentUser as any)?.name || "Admin Staff"}</strong></span>
           </div>
 
           <div className="flex items-center gap-2.5 w-full sm:w-auto">

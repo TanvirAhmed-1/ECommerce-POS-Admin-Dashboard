@@ -20,6 +20,8 @@ import {
   Palette,
   Building2,
   Store,
+  Truck,
+  MapPin,
 } from "lucide-react";
 import { TbCurrencyTaka } from "react-icons/tb";
 import React from "react";
@@ -163,6 +165,11 @@ export const zenithDashboardLinks: SidebarGroup[] = [
   {
     groupName: "SETTINGS",
     links: [
+      {
+        title: "Shipping & Locations",
+        route: "/settings/shipping",
+        icon: <Truck size={18} />,
+      },
       {
         title: "Color & Theme Settings",
         route: "/settings",
