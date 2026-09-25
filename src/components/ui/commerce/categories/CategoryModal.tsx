@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useCreateCategoryMutation, useUpdateCategoryMutation } from "@/redux/features/category/categoryApi";
 import { useUploadSingleImageMutation } from "@/redux/features/upload/uploadApi";
-import { FolderTree, Info, Save, X, UploadCloud, Image as ImageIcon, FileText } from "lucide-react";
+import { FolderTree, Info, Save, X, UploadCloud, Image as ImageIcon, FileText, Globe } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "react-hot-toast";
 
@@ -33,7 +33,9 @@ export default function CategoryModal({
   // Form states
   const [categoryName, setCategoryName] = useState<string>("");
   const [categorySlug, setCategorySlug] = useState<string>("");
-  const [categoryTitle, setCategoryTitle] = useState<string>("");
+  const [metaTitle, setMetaTitle] = useState<string>("");
+  const [metaKeywords, setMetaKeywords] = useState<string>("");
+  const [metaDescription, setMetaDescription] = useState<string>("");
   const [categorySubtitle, setCategorySubtitle] = useState<string>("");
   const [categoryDescription, setCategoryDescription] = useState<string>("");
 
@@ -72,7 +74,9 @@ export default function CategoryModal({
     setIsActive(true);
     setShowInFooter(false);
     setShowInNavbar(false);
-    setCategoryTitle("");
+    setMetaTitle("");
+    setMetaKeywords("");
+    setMetaDescription("");
     setCategorySubtitle("");
     setCategoryDescription("");
     setCategoryImage("");
@@ -111,7 +115,13 @@ export default function CategoryModal({
       setIsActive(activeCategory.isActive ?? true);
       setShowInFooter(activeCategory.showInFooter ?? false);
       setShowInNavbar(activeCategory.showInNavbar ?? false);
-      setCategoryTitle(activeCategory.title || "");
+      setMetaTitle(activeCategory.metaTitle || "");
+      setMetaKeywords(
+        Array.isArray(activeCategory.metaKeywords)
+          ? activeCategory.metaKeywords.join(", ")
+          : activeCategory.metaKeywords || ""
+      );
+      setMetaDescription(activeCategory.metaDescription || "");
       setCategorySubtitle(activeCategory.subtitle || "");
       setCategoryDescription(activeCategory.description || "");
       setCategoryImage(activeCategory.image || "");
@@ -125,7 +135,9 @@ export default function CategoryModal({
       setIsActive(true);
       setShowInFooter(false);
       setShowInNavbar(false);
-      setCategoryTitle("");
+      setMetaTitle("");
+      setMetaKeywords("");
+      setMetaDescription("");
       setCategorySubtitle("");
       setCategoryDescription("");
       setCategoryImage("");
@@ -219,7 +231,14 @@ export default function CategoryModal({
       const commonData = {
         name: categoryName.trim(),
         slug: categorySlug.trim() || undefined,
-        title: categoryTitle.trim() || undefined,
+        metaTitle: metaTitle.trim() || undefined,
+        metaDescription: metaDescription.trim() || undefined,
+        metaKeywords: metaKeywords.trim()
+          ? metaKeywords
+              .split(",")
+              .map((k) => k.trim())
+              .filter(Boolean)
+          : undefined,
         subtitle: categorySubtitle.trim() || undefined,
         description: categoryDescription.trim() || undefined,
         image: categoryImage.trim() || undefined,
@@ -370,20 +389,71 @@ export default function CategoryModal({
             )}
           </div>
 
-          {/* 4. Display Title (H1 for Banner) */}
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-              <span>Display Title (H1 for Banner)</span>
-            </label>
-            <input
-              type="text"
-              disabled={isSaving}
-              placeholder="e.g. Plastic Household Products"
-              value={categoryTitle}
-              onChange={(e) => setCategoryTitle(e.target.value)}
-              className="w-full h-10 px-3 rounded-lg border border-border bg-card text-xs font-medium text-foreground outline-none focus:border-primary transition-all placeholder:text-muted-foreground disabled:opacity-50"
-            />
-            <p className="text-[9px] text-muted-foreground">Shown as the main heading in category hero banner</p>
+          {/* 4. SEO Meta Tags Section */}
+          <div className="space-y-3 p-3.5 rounded-xl border border-border/80 bg-muted/15">
+            <div className="flex items-center gap-1.5 pb-2 border-b border-border/50">
+              <Globe size={14} className="text-primary" />
+              <h5 className="text-[11px] font-bold text-foreground uppercase tracking-wider">
+                SEO Meta Tags
+              </h5>
+            </div>
+
+            {/* Meta Tag Title */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+                  Meta Tag Title
+                </label>
+                <span className="text-[9px] text-muted-foreground font-semibold">
+                  {metaTitle.length}/70
+                </span>
+              </div>
+              <input
+                type="text"
+                maxLength={70}
+                disabled={isSaving}
+                placeholder="e.g. Plastic Household Products - Best Quality & Deals Online"
+                value={metaTitle}
+                onChange={(e) => setMetaTitle(e.target.value)}
+                className="w-full h-10 px-3 rounded-lg border border-border bg-card text-xs font-medium text-foreground outline-none focus:border-primary transition-all placeholder:text-muted-foreground disabled:opacity-50"
+              />
+            </div>
+
+            {/* Meta Tag Keywords */}
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+                Meta Tag Keywords
+              </label>
+              <input
+                type="text"
+                disabled={isSaving}
+                placeholder="e.g. plastic household, kitchen items, containers, storage box (comma separated)"
+                value={metaKeywords}
+                onChange={(e) => setMetaKeywords(e.target.value)}
+                className="w-full h-10 px-3 rounded-lg border border-border bg-card text-xs font-medium text-foreground outline-none focus:border-primary transition-all placeholder:text-muted-foreground disabled:opacity-50"
+              />
+            </div>
+
+            {/* Meta Tag Description */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+                  Meta Tag Description
+                </label>
+                <span className="text-[9px] text-muted-foreground font-semibold">
+                  {metaDescription.length}/160
+                </span>
+              </div>
+              <textarea
+                rows={2}
+                maxLength={160}
+                disabled={isSaving}
+                placeholder="Short search engine description (under 160 characters)..."
+                value={metaDescription}
+                onChange={(e) => setMetaDescription(e.target.value)}
+                className="w-full p-2.5 rounded-lg border border-border bg-card text-xs font-normal text-foreground outline-none focus:border-primary transition-all placeholder:text-muted-foreground disabled:opacity-50 resize-none"
+              />
+            </div>
           </div>
 
           {/* 5. Subtitle / Tagline */}
